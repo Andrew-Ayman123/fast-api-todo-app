@@ -141,24 +141,24 @@ class TodoPGRepository(TodoRepositoryInterface):
                 )
                 return await self._fetch_one(session, query)
 
-            stmt = update(TodoListModel).where(TodoListModel.id == todo_id).values(**update_data)
+            stmt = (
+                update(TodoListModel)
+                .where(TodoListModel.id == todo_id)
+                .values(**update_data)
+                .returning(TodoListModel)
+            )
             result = await session.execute(stmt)
+            updated_todo = result.scalar_one_or_none()
 
             # Check if any rows were affected (todo exists)
-            if result.rowcount == 0:
+            if updated_todo is None:
                 return None
 
             await session.commit()
 
-            # Fetch and return the updated todo with items using selectinload
-            # selectinload is used here because we need to return the complete todo with its items
-            # after the update operation, avoiding the N+1 query problem
-            query = (
-                select(TodoListModel)
-                .options(selectinload(TodoListModel.todo_items))
-                .where(TodoListModel.id == todo_id)
-            )
-            return await self._fetch_one(session, query)
+            # Load the todo_items relationship for the updated todo
+            await session.refresh(updated_todo, ["todo_items"])
+            return updated_todo
 
     async def delete_todo_list(self, todo_id: int) -> bool:
         """Delete todo by ID using SQLAlchemy direct delete.
@@ -261,20 +261,17 @@ class TodoPGRepository(TodoRepositoryInterface):
                 update(TodoListItemModel)
                 .where(TodoListItemModel.todo_id == todo_id, TodoListItemModel.id == item_id)
                 .values(**update_data)
+                .returning(TodoListItemModel)
             )
             result = await session.execute(stmt)
+            updated_item = result.scalar_one_or_none()
 
             # Check if any rows were affected (item exists and belongs to the todo)
-            if result.rowcount == 0:
+            if updated_item is None:
                 return None
 
             await session.commit()
-
-            # Fetch and return the updated item
-            query = select(TodoListItemModel).where(
-                TodoListItemModel.todo_id == todo_id, TodoListItemModel.id == item_id,
-            )
-            return await self._fetch_one(session, query)
+            return updated_item
 
     async def delete_todo_list_item(self, todo_id: int, item_id: int) -> bool:
         """Delete a todo item using SQLAlchemy direct delete.
