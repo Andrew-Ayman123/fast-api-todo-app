@@ -3,7 +3,7 @@
 It provides functions to retrieve instances of database connections, repositories, and services.
 These instances are cached for performance and to ensure that the same instance is reused across requests.
 """
-
+import logging
 from functools import lru_cache
 
 from app.config.database import DatabaseConnection
@@ -12,7 +12,6 @@ from app.repositories.todo_pg_repo_impl import TodoPGRepository
 from app.repositories.todo_repository import TodoRepositoryInterface
 from app.services.todo_service import TodoService
 from app.utils.build_db_connection import build_postgres_connection_string
-
 
 @lru_cache
 def get_env_settings() -> Settings:

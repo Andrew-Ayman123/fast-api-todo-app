@@ -18,6 +18,7 @@ from app.schemas.todo_schema import (
     TodoListItemUpdateRequest,
     TodoListUpdateRequest,
 )
+from app.utils.logger_util import get_logger
 
 
 class TodoPGRepository(TodoRepositoryInterface):
@@ -70,6 +71,7 @@ class TodoPGRepository(TodoRepositoryInterface):
             TodoListModel: The created todo list with assigned ID.
 
         """
+        get_logger().debug("Creating new todo list with title: %s", todo_data.title)
         async with self.database.async_session() as session:
             new_todo = TodoListModel(title=todo_data.title, description=todo_data.description)
             session.add(new_todo)
@@ -79,6 +81,7 @@ class TodoPGRepository(TodoRepositoryInterface):
             # Ensure todo_items relationship is loaded before session closes
             # For a new todo, this will be an empty list
             await session.refresh(new_todo, ["todo_items"])
+            get_logger().info("Successfully created todo list with ID: %s", new_todo.id)
             return new_todo
 
     async def get_todo_list_by_id(self, todo_id: int) -> TodoListModel | None:
@@ -91,11 +94,17 @@ class TodoPGRepository(TodoRepositoryInterface):
             TodoListModel | None: The todo list if found, None otherwise.
 
         """
+        get_logger().debug("Fetching todo list by ID: %s", todo_id)
         async with self.database.async_session() as session:
             query = (
                 select(TodoListModel).options(selectinload(TodoListModel.todo_items)).where(TodoListModel.id == todo_id)
             )
-            return await self._fetch_one(session, query)
+            result = await self._fetch_one(session, query)
+            if result:
+                get_logger().info("Successfully retrieved todo list ID: %s", todo_id)
+            else:
+                get_logger().warning("Todo list with ID: %s not found", todo_id)
+            return result
 
     async def get_all_todo_lists(self, skip: int = 0, limit: int = 100) -> list[TodoListModel]:
         """Get all todos with pagination using SQLAlchemy fetch_all equivalent.
@@ -108,6 +117,7 @@ class TodoPGRepository(TodoRepositoryInterface):
             list[TodoListModel]: List of todo lists.
 
         """
+        get_logger().debug("Fetching all todo lists with skip: %s, limit: %s", skip, limit)
         async with self.database.async_session() as session:
             query = (
                 select(TodoListModel)
@@ -116,7 +126,9 @@ class TodoPGRepository(TodoRepositoryInterface):
                 .limit(limit)
                 .order_by(TodoListModel.id)
             )
-            return await self._fetch_all(session, query)
+            result = await self._fetch_all(session, query)
+            get_logger().info("Successfully retrieved %s todo lists", len(result))
+            return result
 
     async def update_todo_list(self, todo_id: int, todo_data: TodoListUpdateRequest) -> TodoListModel | None:
         """Update todo by ID using SQLAlchemy direct update.
@@ -129,10 +141,12 @@ class TodoPGRepository(TodoRepositoryInterface):
             TodoListModel | None: The updated todo list if found, None otherwise.
 
         """
+        get_logger().debug("Updating todo list with ID: %s", todo_id)
         async with self.database.async_session() as session:
             # Perform direct update and check affected rows
             update_data = todo_data.model_dump(exclude_unset=True)
             if not update_data:
+                get_logger().info("No fields to update for todo list ID: %s, returning existing todo", todo_id)
                 # No fields to update, fetch and return existing todo
                 query = (
                     select(TodoListModel)
@@ -141,6 +155,7 @@ class TodoPGRepository(TodoRepositoryInterface):
                 )
                 return await self._fetch_one(session, query)
 
+            get_logger().debug("Updating todo list ID: %s with data: %s", todo_id, update_data)
             stmt = (
                 update(TodoListModel)
                 .where(TodoListModel.id == todo_id)
@@ -152,9 +167,11 @@ class TodoPGRepository(TodoRepositoryInterface):
 
             # Check if any rows were affected (todo exists)
             if updated_todo is None:
+                get_logger().warning("Todo list with ID: %s not found for update", todo_id)
                 return None
 
             await session.commit()
+            get_logger().info("Successfully updated todo list ID: %s", todo_id)
 
             # Load the todo_items relationship for the updated todo
             await session.refresh(updated_todo, ["todo_items"])
@@ -170,6 +187,7 @@ class TodoPGRepository(TodoRepositoryInterface):
             bool: True if the todo list was deleted, False if not found.
 
         """
+        get_logger().debug("Deleting todo list with ID: %s", todo_id)
         async with self.database.async_session() as session:
             # Perform direct delete and check affected rows
             stmt = delete(TodoListModel).where(TodoListModel.id == todo_id)
@@ -177,7 +195,12 @@ class TodoPGRepository(TodoRepositoryInterface):
 
             await session.commit()
             # Return True if any rows were deleted (todo existed)
-            return result.rowcount > 0
+            deleted = result.rowcount > 0
+            if deleted:
+                get_logger().info("Successfully deleted todo list ID: %s", todo_id)
+            else:
+                get_logger().warning("Todo list with ID: %s not found for deletion", todo_id)
+            return deleted
 
     async def add_todo_list_item(self, todo_id: int, item_data: TodoListItemsAddRequest) -> TodoListItemModel | None:
         """Add a todo item to a todo using SQLAlchemy.
@@ -190,6 +213,7 @@ class TodoPGRepository(TodoRepositoryInterface):
             TodoListItemModel | None: The created todo item if the list exists, None otherwise.
 
         """
+        get_logger().debug("Adding item to todo list ID: %s with title: %s", todo_id, item_data.title)
         async with self.database.async_session() as session:
             try:
                 # Create new item directly - foreign key constraint will handle todo existence validation
@@ -202,9 +226,11 @@ class TodoPGRepository(TodoRepositoryInterface):
             except IntegrityError:
                 # If foreign key constraint fails (todo doesn't exist), rollback and return None
                 await session.rollback()
+                get_logger().warning("Failed to add item to todo list ID: %s - todo list not found", todo_id)
                 return None
             else:
                 await session.refresh(new_item)
+                get_logger().info("Successfully added item ID: %s to todo list ID: %s", new_item.id, todo_id)
                 return new_item
 
     async def get_todo_list_items(self, todo_id: int, skip: int = 0, limit: int = 100) -> list[TodoListItemModel]:
@@ -220,6 +246,7 @@ class TodoPGRepository(TodoRepositoryInterface):
                                    Returns empty list if todo doesn't exist.
 
         """
+        get_logger().debug("Fetching items for todo list ID: %s with skip: %s, limit: %s", todo_id, skip, limit)
         async with self.database.async_session() as session:
             # Directly query items - if todo doesn't exist, we'll get empty list
             # No need to check todo existence separately as foreign key constraint ensures data integrity
@@ -231,7 +258,9 @@ class TodoPGRepository(TodoRepositoryInterface):
                 .limit(limit)
             )
 
-            return await self._fetch_all(session, query)
+            result = await self._fetch_all(session, query)
+            get_logger().info("Successfully retrieved %s items for todo list ID: %s", len(result), todo_id)
+            return result
 
     async def update_todo_list_item(
         self, todo_id: int, item_id: int, item_data: TodoListItemUpdateRequest,
@@ -247,16 +276,25 @@ class TodoPGRepository(TodoRepositoryInterface):
             TodoListItemModel | None: The updated todo item if found, None otherwise.
 
         """
+        get_logger().debug("Updating todo item ID: %s in todo list ID: %s", item_id, todo_id)
         async with self.database.async_session() as session:
             # Perform direct update and check affected rows
             update_data = item_data.model_dump(exclude_unset=True)
             if not update_data:
+                get_logger().info(
+                    "No fields to update for todo item ID: %s in todo list ID: %s, returning existing item",
+                    item_id, todo_id,
+                )
                 # No fields to update, fetch and return existing item
                 query = select(TodoListItemModel).where(
                     TodoListItemModel.todo_id == todo_id, TodoListItemModel.id == item_id,
                 )
                 return await self._fetch_one(session, query)
 
+            get_logger().debug(
+                "Updating todo item ID: %s in todo list ID: %s with data: %s",
+                item_id, todo_id, update_data,
+            )
             stmt = (
                 update(TodoListItemModel)
                 .where(TodoListItemModel.todo_id == todo_id, TodoListItemModel.id == item_id)
@@ -268,9 +306,11 @@ class TodoPGRepository(TodoRepositoryInterface):
 
             # Check if any rows were affected (item exists and belongs to the todo)
             if updated_item is None:
+                get_logger().warning("Todo item ID: %s not found in todo list ID: %s for update", item_id, todo_id)
                 return None
 
             await session.commit()
+            get_logger().info("Successfully updated todo item ID: %s in todo list ID: %s", item_id, todo_id)
             return updated_item
 
     async def delete_todo_list_item(self, todo_id: int, item_id: int) -> bool:
@@ -284,6 +324,7 @@ class TodoPGRepository(TodoRepositoryInterface):
             bool: True if the todo item was deleted, False if not found.
 
         """
+        get_logger().debug("Deleting todo item ID: %s from todo list ID: %s", item_id, todo_id)
         async with self.database.async_session() as session:
             # Perform direct delete and check affected rows
             stmt = delete(TodoListItemModel).where(
@@ -293,4 +334,9 @@ class TodoPGRepository(TodoRepositoryInterface):
 
             await session.commit()
             # Return True if any rows were deleted (item existed and belonged to the todo)
-            return result.rowcount > 0
+            deleted = result.rowcount > 0
+            if deleted:
+                get_logger().info("Successfully deleted todo item ID: %s from todo list ID: %s", item_id, todo_id)
+            else:
+                get_logger().warning("Todo item ID: %s not found in todo list ID: %s for deletion", item_id, todo_id)
+            return deleted
