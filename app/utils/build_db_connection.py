@@ -11,7 +11,6 @@ def build_postgres_connection_string(  # noqa: PLR0913
     """Build async PostgreSQL connection string.
 
     Args:
-        database_url (str): Full database URL (takes precedence if provided)
         database_user (str): Database username
         database_password (str): Database password
         database_host (str): Database host

@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config.database import DatabaseConnection
 from app.models.todo_model import TodoListItemModel, TodoListModel
-from app.repositories.todo_repository import TodoRepositoryInterface
+from app.repositories.todo_repository_interface import TodoRepositoryInterface
 from app.schemas.todo_schema import (
     TodoListCreateRequest,
     TodoListItemsAddRequest,

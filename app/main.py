@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from app.dependencies import get_env_settings
 from app.interfaces.api.v1.controllers.health_check_controller import router as health_routes
 from app.interfaces.api.v1.controllers.todo_controller import router as todo_router
+from app.interfaces.api.v1.controllers.user_controller import router as user_router
 
 app = FastAPI(
     title=get_env_settings().app_name,
@@ -19,3 +20,4 @@ app = FastAPI(
 
 app.include_router(todo_router, prefix="/api/v1")
 app.include_router(health_routes, prefix="/api/v1")
+app.include_router(user_router, prefix="/api/v1")

@@ -3,7 +3,6 @@
 .coverage
 
 # Alembic
-alembic/versions/
 
 # vscode settings
 .vscode/
@@ -12,3 +11,7 @@ alembic/versions/
 __pycache__/
 *.pyc
 *.pyo
+
+# uv
+build
+fast_api_test_todo.egg-info

@@ -7,6 +7,8 @@ from app.dependencies import get_todo_service
 from app.exceptions.todo_exception import TodoListItemNotFoundError, TodoListNotFoundError
 from app.models.todo_model import TodoListItemModel, TodoListModel
 from app.schemas.todo_schema import (
+    PaginatedTodoListItemResponse,
+    PaginatedTodoListResponse,
     SuccessResponse,
     TodoListCreateManyRequest,
     TodoListCreateRequest,
@@ -20,8 +22,6 @@ from app.schemas.todo_schema import (
     TodoListResponse,
     TodoListUpdateManyRequest,
     TodoListUpdateRequest,
-    PaginatedTodoListResponse,
-    PaginatedTodoListItemResponse,
 )
 from app.services.todo_service import TodoService
 

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import DatabaseConnection
 from app.dependencies import get_database
 from app.models.todo_model import Base, TodoListItemModel, TodoListModel
-from app.repositories.todo_pg_repo_impl import TodoPGRepository
+from app.repositories.todo_pg_repository_impl import TodoPGRepository
 from app.schemas.todo_schema import (
     TodoListCreateRequest,
     TodoListItemsAddRequest,

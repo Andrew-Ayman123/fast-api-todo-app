@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from app.exceptions.todo_exception import TodoListItemNotFoundError, TodoListNotFoundError
 from app.models.todo_model import TodoListItemModel, TodoListModel
-from app.repositories.todo_repository import TodoRepositoryInterface
+from app.repositories.todo_repository_interface import TodoRepositoryInterface
 from app.schemas.todo_schema import (
     TodoListCreateRequest,
     TodoListItemsAddRequest,

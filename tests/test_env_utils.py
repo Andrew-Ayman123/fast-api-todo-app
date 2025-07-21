@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.utils.env_utils import get_env, get_env_bool, get_env_int
+from app.utils.env_util import get_env, get_env_bool, get_env_int
 
 
 class TestEnvUtils:
