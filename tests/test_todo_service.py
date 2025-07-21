@@ -1,325 +1,313 @@
+"""Unit tests for the TodoService class."""
+
 import pytest
-from unittest.mock import Mock, AsyncMock
-from app.services.todo_service import TodoService
-from app.models.todo_model import TodoModel, TodoItemModel
-from app.schemas.todo_schema import TodoCreateRequest, TodoUpdateRequest, TodoItemsAddRequest, TodoItemUpdateRequest
+import pytest_asyncio
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock
+
+from app.exceptions.todo_exception import TodoListItemNotFoundError, TodoListNotFoundError
+from app.models.todo_model import TodoListItemModel, TodoListModel
 from app.repositories.todo_repository import TodoRepositoryInterface
-from datetime import datetime
+from app.schemas.todo_schema import (
+    TodoListCreateRequest,
+    TodoListItemsAddRequest,
+    TodoListItemUpdateRequest,
+    TodoListUpdateRequest,
+)
+from app.services.todo_service import TodoService
 
 
+@pytest.mark.asyncio
 class TestTodoService:
-    """Unit tests for TodoService with mocked repository"""
+    """Test suite for TodoService class."""
 
     @pytest.fixture
-    def mock_repository(self):
-        """Fixture to provide a mocked TodoRepository"""
-        repository = Mock(spec=TodoRepositoryInterface)
-        # Configure all methods as async methods
-        repository.create_todo = AsyncMock()
-        repository.get_todo_by_id = AsyncMock()
-        repository.get_all_todos = AsyncMock()
-        repository.update_todo = AsyncMock()
-        repository.delete_todo = AsyncMock()
-        repository.add_todo_item = AsyncMock()
-        repository.get_todo_items = AsyncMock()
-        repository.update_todo_item = AsyncMock()
-        repository.delete_todo_item = AsyncMock()
-        return repository
+    def mock_todo_repository(self):
+        """Create a mock todo repository for testing."""
+        return AsyncMock(spec=TodoRepositoryInterface)
 
     @pytest.fixture
-    def todo_service(self, mock_repository):
-        """Fixture to provide a TodoService instance with mocked repository"""
-        return TodoService(mock_repository)
+    def todo_service(self, mock_todo_repository):
+        """Create a TodoService instance with mocked repository."""
+        return TodoService(todo_repository=mock_todo_repository)
 
     @pytest.fixture
-    def sample_todo_model(self):
-        """Fixture to provide a sample TodoModel"""
-        return TodoModel(
+    def sample_todo_list_model(self):
+        """Create a sample TodoListModel for testing."""
+        return TodoListModel(
             id=1,
-            title="Test Todo",
-            description="This is a test todo",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            title="Test Todo List",
+            description="Test description",
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0),
         )
 
     @pytest.fixture
     def sample_todo_item_model(self):
-        """Fixture to provide a sample TodoItemModel"""
-        return TodoItemModel(
+        """Create a sample TodoListItemModel for testing."""
+        return TodoListItemModel(
             id=1,
             todo_id=1,
-            title="Test Item",
-            description="This is a test item",
+            title="Test Todo Item",
+            description="Test item description",
             completed=False,
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0),
         )
 
-    @pytest.mark.asyncio
-    async def test_create_todo(self, todo_service, mock_repository, sample_todo_model):
-        """Test creating a new todo item"""
-        # Arrange
-        todo_data = TodoCreateRequest(title="Test Todo", description="This is a test todo")
-        mock_repository.create_todo.return_value = sample_todo_model
+    @pytest.fixture
+    def sample_todo_create_request(self):
+        """Create a sample TodoListCreateRequest for testing."""
+        return TodoListCreateRequest(
+            title="New Todo List",
+            description="New description"
+        )
 
-        # Act
-        result = await todo_service.create_todo(todo_data)
+    @pytest.fixture
+    def sample_todo_update_request(self):
+        """Create a sample TodoListUpdateRequest for testing."""
+        return TodoListUpdateRequest(
+            title="Updated Todo List",
+            description="Updated description"
+        )
 
-        # Assert
-        mock_repository.create_todo.assert_called_once_with(todo_data)
-        assert result == sample_todo_model
-        assert result.title == "Test Todo"
-        assert result.description == "This is a test todo"
+    @pytest.fixture
+    def sample_item_add_request(self):
+        """Create a sample TodoListItemsAddRequest for testing."""
+        return TodoListItemsAddRequest(
+            title="New Todo Item",
+            description="New item description"
+        )
 
-    @pytest.mark.asyncio
-    async def test_get_todo_by_id_exists(self, todo_service, mock_repository, sample_todo_model):
-        """Test retrieving a todo item by ID when it exists"""
-        # Arrange
-        todo_id = 1
-        mock_repository.get_todo_by_id.return_value = sample_todo_model
+    @pytest.fixture
+    def sample_item_update_request(self):
+        """Create a sample TodoListItemUpdateRequest for testing."""
+        return TodoListItemUpdateRequest(
+            title="Updated Todo Item",
+            description="Updated item description",
+            completed=True
+        )
 
-        # Act
-        result = await todo_service.get_todo(todo_id)
+    # Tests for create_todo_list
+    async def test_create_todo_list_success(self, todo_service, mock_todo_repository, sample_todo_create_request, sample_todo_list_model):
+        """Test successful creation of a todo list."""
+        mock_todo_repository.create_todo_list.return_value = sample_todo_list_model
 
-        # Assert
-        mock_repository.get_todo_by_id.assert_called_once_with(todo_id)
-        assert result == sample_todo_model
+        result = await todo_service.create_todo_list(sample_todo_create_request)
 
-    @pytest.mark.asyncio
-    async def test_get_todo_by_id_not_exists(self, todo_service, mock_repository):
-        """Test retrieving a todo item by ID when it doesn't exist"""
-        # Arrange
-        todo_id = 999
-        mock_repository.get_todo_by_id.return_value = None
+        mock_todo_repository.create_todo_list.assert_called_once_with(sample_todo_create_request)
+        assert result == sample_todo_list_model
 
-        # Act
-        result = await todo_service.get_todo(todo_id)
+    # Tests for get_todo_list_by_id
+    async def test_get_todo_list_by_id_success(self, todo_service, mock_todo_repository, sample_todo_list_model):
+        """Test successful retrieval of a todo list by ID."""
+        mock_todo_repository.get_todo_list_by_id.return_value = sample_todo_list_model
 
-        # Assert
-        mock_repository.get_todo_by_id.assert_called_once_with(todo_id)
-        assert result is None
+        result = await todo_service.get_todo_list_by_id(1)
 
-    @pytest.mark.asyncio
-    async def test_get_all_todos(self, todo_service, mock_repository, sample_todo_model):
-        """Test retrieving all todo items with pagination"""
-        # Arrange
-        todos_list = [sample_todo_model, sample_todo_model]
-        mock_repository.get_all_todos.return_value = todos_list
+        mock_todo_repository.get_todo_list_by_id.assert_called_once_with(1)
+        assert result == sample_todo_list_model
 
-        # Act
-        result = await todo_service.get_all_todos(skip=0, limit=10)
+    async def test_get_todo_list_by_id_not_found(self, todo_service, mock_todo_repository):
+        """Test TodoListNotFoundError when todo list is not found."""
+        mock_todo_repository.get_todo_list_by_id.return_value = None
 
-        # Assert
-        mock_repository.get_all_todos.assert_called_once_with(0, 10)
-        assert result == todos_list
-        assert len(result) == 2
+        with pytest.raises(TodoListNotFoundError) as exc_info:
+            await todo_service.get_todo_list_by_id(999)
 
-    @pytest.mark.asyncio
-    async def test_get_all_todos_default_params(self, todo_service, mock_repository):
-        """Test retrieving all todo items with default pagination"""
-        # Arrange
-        mock_repository.get_all_todos.return_value = []
+        mock_todo_repository.get_todo_list_by_id.assert_called_once_with(999)
+        assert exc_info.value.todo_id == 999
 
-        # Act
-        result = await todo_service.get_all_todos()
+    # Tests for get_all_todo_lists_without_items
+    async def test_get_all_todo_lists_without_items_default_params(self, todo_service, mock_todo_repository, sample_todo_list_model):
+        """Test retrieval of all todo lists with default pagination parameters."""
+        expected_todos = [sample_todo_list_model]
+        mock_todo_repository.get_all_todo_lists.return_value = expected_todos
 
-        # Assert
-        mock_repository.get_all_todos.assert_called_once_with(0, 100)
+        result = await todo_service.get_all_todo_lists_without_items()
+
+        mock_todo_repository.get_all_todo_lists.assert_called_once_with(0, 100)
+        assert result == expected_todos
+
+    async def test_get_all_todo_lists_without_items_custom_params(self, todo_service, mock_todo_repository, sample_todo_list_model):
+        """Test retrieval of all todo lists with custom pagination parameters."""
+        expected_todos = [sample_todo_list_model]
+        mock_todo_repository.get_all_todo_lists.return_value = expected_todos
+
+        result = await todo_service.get_all_todo_lists_without_items(skip=10, limit=50)
+
+        mock_todo_repository.get_all_todo_lists.assert_called_once_with(10, 50)
+        assert result == expected_todos
+
+    async def test_get_all_todo_lists_without_items_empty_result(self, todo_service, mock_todo_repository):
+        """Test retrieval of all todo lists when no todos exist."""
+        mock_todo_repository.get_all_todo_lists.return_value = []
+
+        result = await todo_service.get_all_todo_lists_without_items()
+
+        mock_todo_repository.get_all_todo_lists.assert_called_once_with(0, 100)
         assert result == []
 
-    @pytest.mark.asyncio
-    async def test_update_todo_exists(self, todo_service, mock_repository, sample_todo_model):
-        """Test updating an existing todo item"""
-        # Arrange
-        todo_id = 1
-        update_data = TodoUpdateRequest(title="Updated Todo", description="Updated description")
-        updated_todo = TodoModel(
-            id=1,
-            title="Updated Todo",
-            description="Updated description",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
-        )
-        mock_repository.update_todo.return_value = updated_todo
+    # Tests for update_todo_list
+    async def test_update_todo_list_success(self, todo_service, mock_todo_repository, sample_todo_update_request, sample_todo_list_model):
+        """Test successful update of a todo list."""
+        mock_todo_repository.update_todo_list.return_value = sample_todo_list_model
 
-        # Act
-        result = await todo_service.update_todo(todo_id, update_data)
+        result = await todo_service.update_todo_list(1, sample_todo_update_request)
 
-        # Assert
-        mock_repository.update_todo.assert_called_once_with(todo_id, update_data)
-        assert result == updated_todo
-        assert result.title == "Updated Todo"
+        mock_todo_repository.update_todo_list.assert_called_once_with(1, sample_todo_update_request)
+        assert result == sample_todo_list_model
 
-    @pytest.mark.asyncio
-    async def test_update_todo_not_exists(self, todo_service, mock_repository):
-        """Test updating a todo item that doesn't exist"""
-        # Arrange
-        todo_id = 999
-        update_data = TodoUpdateRequest(title="Updated Todo")
-        mock_repository.update_todo.return_value = None
+    async def test_update_todo_list_not_found(self, todo_service, mock_todo_repository, sample_todo_update_request):
+        """Test TodoListNotFoundError when updating non-existent todo list."""
+        mock_todo_repository.update_todo_list.return_value = None
 
-        # Act
-        result = await todo_service.update_todo(todo_id, update_data)
+        with pytest.raises(TodoListNotFoundError) as exc_info:
+            await todo_service.update_todo_list(999, sample_todo_update_request)
 
-        # Assert
-        mock_repository.update_todo.assert_called_once_with(todo_id, update_data)
+        mock_todo_repository.update_todo_list.assert_called_once_with(999, sample_todo_update_request)
+        assert exc_info.value.todo_id == 999
+
+    # Tests for delete_todo_list
+    async def test_delete_todo_list_success(self, todo_service, mock_todo_repository):
+        """Test successful deletion of a todo list."""
+        mock_todo_repository.delete_todo_list.return_value = True
+
+        result = await todo_service.delete_todo_list(1)
+
+        mock_todo_repository.delete_todo_list.assert_called_once_with(1)
         assert result is None
 
-    @pytest.mark.asyncio
-    async def test_delete_todo_exists(self, todo_service, mock_repository):
-        """Test deleting a todo item that exists"""
-        # Arrange
-        todo_id = 1
-        mock_repository.delete_todo.return_value = True
+    async def test_delete_todo_list_not_found(self, todo_service, mock_todo_repository):
+        """Test TodoListNotFoundError when deleting non-existent todo list."""
+        mock_todo_repository.delete_todo_list.return_value = False
 
-        # Act
-        result = await todo_service.delete_todo(todo_id)
+        with pytest.raises(TodoListNotFoundError) as exc_info:
+            await todo_service.delete_todo_list(999)
 
-        # Assert
-        mock_repository.delete_todo.assert_called_once_with(todo_id)
-        assert result is True
+        mock_todo_repository.delete_todo_list.assert_called_once_with(999)
+        assert exc_info.value.todo_id == 999
 
-    @pytest.mark.asyncio
-    async def test_delete_todo_not_exists(self, todo_service, mock_repository):
-        """Test deleting a todo item that doesn't exist"""
-        # Arrange
-        todo_id = 999
-        mock_repository.delete_todo.return_value = False
+    # Tests for add_todo_list_item
+    async def test_add_todo_list_item_success(self, todo_service, mock_todo_repository, sample_item_add_request, sample_todo_item_model):
+        """Test successful addition of an item to a todo list."""
+        mock_todo_repository.add_todo_list_item.return_value = sample_todo_item_model
 
-        # Act
-        result = await todo_service.delete_todo(todo_id)
+        result = await todo_service.add_todo_list_item(1, sample_item_add_request)
 
-        # Assert
-        mock_repository.delete_todo.assert_called_once_with(todo_id)
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_add_todo_item(self, todo_service, mock_repository, sample_todo_item_model):
-        """Test adding a todo item"""
-        # Arrange
-        todo_id = 1
-        item_data = TodoItemsAddRequest(title="Test Item", description="This is a test item")
-        mock_repository.add_todo_item.return_value = sample_todo_item_model
-
-        # Act
-        result = await todo_service.add_todo_item(todo_id, item_data)
-
-        # Assert
-        mock_repository.add_todo_item.assert_called_once_with(todo_id, item_data)
+        mock_todo_repository.add_todo_list_item.assert_called_once_with(1, sample_item_add_request)
         assert result == sample_todo_item_model
 
-    @pytest.mark.asyncio
-    async def test_add_todo_item_not_exists(self, todo_service, mock_repository):
-        """Test adding a todo item to non-existent todo"""
-        # Arrange
-        todo_id = 999
-        item_data = TodoItemsAddRequest(title="Test Item")
-        mock_repository.add_todo_item.return_value = None
+    async def test_add_todo_list_item_todo_not_found(self, todo_service, mock_todo_repository, sample_item_add_request):
+        """Test TodoListNotFoundError when adding item to non-existent todo list."""
+        mock_todo_repository.add_todo_list_item.return_value = None
 
-        # Act
-        result = await todo_service.add_todo_item(todo_id, item_data)
+        with pytest.raises(TodoListNotFoundError) as exc_info:
+            await todo_service.add_todo_list_item(999, sample_item_add_request)
 
-        # Assert
-        mock_repository.add_todo_item.assert_called_once_with(todo_id, item_data)
-        assert result is None
+        mock_todo_repository.add_todo_list_item.assert_called_once_with(999, sample_item_add_request)
+        assert exc_info.value.todo_id == 999
 
-    @pytest.mark.asyncio
-    async def test_get_todo_items(self, todo_service, mock_repository, sample_todo_item_model):
-        """Test retrieving todo items with pagination"""
-        # Arrange
-        todo_id = 1
-        items_list = [sample_todo_item_model]
-        mock_repository.get_todo_items.return_value = items_list
+    # Tests for get_todo_list_items
+    async def test_get_todo_list_items_default_params(self, todo_service, mock_todo_repository, sample_todo_item_model):
+        """Test retrieval of todo list items with default pagination parameters."""
+        expected_items = [sample_todo_item_model]
+        mock_todo_repository.get_todo_list_items.return_value = expected_items
 
-        # Act
-        result = await todo_service.get_todo_items(todo_id, skip=0, limit=10)
+        result = await todo_service.get_todo_list_items(1)
 
-        # Assert
-        mock_repository.get_todo_items.assert_called_once_with(todo_id, 0, 10)
-        assert result == items_list
+        mock_todo_repository.get_todo_list_items.assert_called_once_with(1, 0, 100)
+        assert result == expected_items
 
-    @pytest.mark.asyncio
-    async def test_get_todo_items_default_params(self, todo_service, mock_repository):
-        """Test retrieving todo items with default pagination"""
-        # Arrange
-        todo_id = 1
-        mock_repository.get_todo_items.return_value = []
+    async def test_get_todo_list_items_custom_params(self, todo_service, mock_todo_repository, sample_todo_item_model):
+        """Test retrieval of todo list items with custom pagination parameters."""
+        expected_items = [sample_todo_item_model]
+        mock_todo_repository.get_todo_list_items.return_value = expected_items
 
-        # Act
-        result = await todo_service.get_todo_items(todo_id)
+        result = await todo_service.get_todo_list_items(1, skip=5, limit=25)
 
-        # Assert
-        mock_repository.get_todo_items.assert_called_once_with(todo_id, 0, 100)
+        mock_todo_repository.get_todo_list_items.assert_called_once_with(1, 5, 25)
+        assert result == expected_items
+
+    async def test_get_todo_list_items_empty_result(self, todo_service, mock_todo_repository):
+        """Test retrieval of todo list items when no items exist."""
+        mock_todo_repository.get_todo_list_items.return_value = []
+
+        result = await todo_service.get_todo_list_items(1)
+
+        mock_todo_repository.get_todo_list_items.assert_called_once_with(1, 0, 100)
         assert result == []
 
-    @pytest.mark.asyncio
-    async def test_update_todo_item_exists(self, todo_service, mock_repository, sample_todo_item_model):
-        """Test updating an existing todo item"""
-        # Arrange
-        todo_id = 1
-        item_id = 1
-        item_data = TodoItemUpdateRequest(title="Updated Item", completed=True)
-        updated_item = TodoItemModel(
-            id=1,
-            todo_id=1,
-            title="Updated Item",
-            description="This is a test item",
-            completed=True,
-            created_at=datetime.now(),
-            updated_at=datetime.now()
-        )
-        mock_repository.update_todo_item.return_value = updated_item
+    # Tests for update_todo_item
+    async def test_update_todo_item_success(self, todo_service, mock_todo_repository, sample_item_update_request, sample_todo_item_model):
+        """Test successful update of a todo list item."""
+        mock_todo_repository.update_todo_list_item.return_value = sample_todo_item_model
 
-        # Act
-        result = await todo_service.update_todo_item(todo_id, item_id, item_data)
+        result = await todo_service.update_todo_item(1, 1, sample_item_update_request)
 
-        # Assert
-        mock_repository.update_todo_item.assert_called_once_with(todo_id, item_id, item_data)
-        assert result == updated_item
-        assert result.completed is True
+        mock_todo_repository.update_todo_list_item.assert_called_once_with(1, 1, sample_item_update_request)
+        assert result == sample_todo_item_model
 
-    @pytest.mark.asyncio
-    async def test_update_todo_item_not_exists(self, todo_service, mock_repository):
-        """Test updating a todo item that doesn't exist"""
-        # Arrange
-        todo_id = 1
-        item_id = 999
-        item_data = TodoItemUpdateRequest(title="Updated Item")
-        mock_repository.update_todo_item.return_value = None
+    async def test_update_todo_item_not_found(self, todo_service, mock_todo_repository, sample_item_update_request):
+        """Test TodoListItemNotFoundError when updating non-existent todo item."""
+        mock_todo_repository.update_todo_list_item.return_value = None
 
-        # Act
-        result = await todo_service.update_todo_item(todo_id, item_id, item_data)
+        with pytest.raises(TodoListItemNotFoundError) as exc_info:
+            await todo_service.update_todo_item(1, 999, sample_item_update_request)
 
-        # Assert
-        mock_repository.update_todo_item.assert_called_once_with(todo_id, item_id, item_data)
+        mock_todo_repository.update_todo_list_item.assert_called_once_with(1, 999, sample_item_update_request)
+        assert exc_info.value.todo_id == 1
+        assert exc_info.value.item_id == 999
+
+    # Tests for delete_todo_list_item
+    async def test_delete_todo_list_item_success(self, todo_service, mock_todo_repository):
+        """Test successful deletion of a todo list item."""
+        mock_todo_repository.delete_todo_list_item.return_value = True
+
+        result = await todo_service.delete_todo_list_item(1, 1)
+
+        mock_todo_repository.delete_todo_list_item.assert_called_once_with(1, 1)
         assert result is None
 
-    @pytest.mark.asyncio
-    async def test_delete_todo_item_exists(self, todo_service, mock_repository):
-        """Test deleting a todo item that exists"""
-        # Arrange
-        todo_id = 1
-        item_id = 1
-        mock_repository.delete_todo_item.return_value = True
+    async def test_delete_todo_list_item_not_found(self, todo_service, mock_todo_repository):
+        """Test TodoListItemNotFoundError when deleting non-existent todo item."""
+        mock_todo_repository.delete_todo_list_item.return_value = False
 
-        # Act
-        result = await todo_service.delete_todo_item(todo_id, item_id)
+        with pytest.raises(TodoListItemNotFoundError) as exc_info:
+            await todo_service.delete_todo_list_item(1, 999)
 
-        # Assert
-        mock_repository.delete_todo_item.assert_called_once_with(todo_id, item_id)
-        assert result is True
+        mock_todo_repository.delete_todo_list_item.assert_called_once_with(1, 999)
+        assert exc_info.value.todo_id == 1
+        assert exc_info.value.item_id == 999
 
-    @pytest.mark.asyncio
-    async def test_delete_todo_item_not_exists(self, todo_service, mock_repository):
-        """Test deleting a todo item that doesn't exist"""
-        # Arrange
-        todo_id = 1
-        item_id = 999
-        mock_repository.delete_todo_item.return_value = False
+    # Edge case tests
+    async def test_service_initialization(self, mock_todo_repository):
+        """Test proper initialization of TodoService."""
+        service = TodoService(todo_repository=mock_todo_repository)
+        assert service.todo_repository == mock_todo_repository
 
-        # Act
-        result = await todo_service.delete_todo_item(todo_id, item_id)
+    async def test_multiple_todo_lists(self, todo_service, mock_todo_repository):
+        """Test handling multiple todo lists."""
+        todo1 = TodoListModel(id=1, title="Todo 1", description="Description 1", created_at=datetime.now(), updated_at=datetime.now())
+        todo2 = TodoListModel(id=2, title="Todo 2", description="Description 2", created_at=datetime.now(), updated_at=datetime.now())
+        expected_todos = [todo1, todo2]
+        
+        mock_todo_repository.get_all_todo_lists.return_value = expected_todos
 
-        # Assert
-        mock_repository.delete_todo_item.assert_called_once_with(todo_id, item_id)
-        assert result is False
+        result = await todo_service.get_all_todo_lists_without_items()
+
+        assert len(result) == 2
+        assert result == expected_todos
+
+    async def test_multiple_todo_items(self, todo_service, mock_todo_repository):
+        """Test handling multiple todo items."""
+        item1 = TodoListItemModel(id=1, todo_id=1, title="Item 1", description="Description 1", completed=False, created_at=datetime.now(), updated_at=datetime.now())
+        item2 = TodoListItemModel(id=2, todo_id=1, title="Item 2", description="Description 2", completed=True, created_at=datetime.now(), updated_at=datetime.now())
+        expected_items = [item1, item2]
+        
+        mock_todo_repository.get_todo_list_items.return_value = expected_items
+
+        result = await todo_service.get_todo_list_items(1)
+
+        assert len(result) == 2
+        assert result == expected_items

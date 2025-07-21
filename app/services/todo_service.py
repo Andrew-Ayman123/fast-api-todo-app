@@ -1,44 +1,191 @@
-from typing import List, Optional
-from app.models.todo_model import TodoModel, TodoItemModel
-from app.schemas.todo_schema import TodoCreateRequest, TodoUpdateRequest, TodoItemsAddRequest, TodoItemUpdateRequest
+"""Todo Service Module.
+
+This module defines the TodoService class, which provides methods for managing todos.
+It interacts with the TodoRepositoryInterface to perform CRUD operations on todos.
+"""
+
+from app.exceptions.todo_exception import TodoListItemNotFoundError, TodoListNotFoundError
+from app.models.todo_model import TodoListItemModel, TodoListModel
 from app.repositories.todo_repository import TodoRepositoryInterface
+from app.schemas.todo_schema import (
+    TodoListCreateRequest,
+    TodoListItemsAddRequest,
+    TodoListItemUpdateRequest,
+    TodoListUpdateRequest,
+)
+
 
 class TodoService:
-    
-    def __init__(self, todo_repository: TodoRepositoryInterface):
+    """Service class for managing todos.
+
+    Example:
+        todo_service = TodoService(todo_repository=todo_repository_instance)
+        new_todo = await todo_service.create_todo_list(todo_data)
+        all_todos = await todo_service.get_all_todo_lists_without_items()
+
+    """
+
+    def __init__(self, todo_repository: TodoRepositoryInterface) -> None:
+        """Initialize the TodoService with a repository instance.
+
+        Args:
+            todo_repository (TodoRepositoryInterface): An instance of TodoRepositoryInterface for database operations.
+
+        """
         self.todo_repository = todo_repository
-    
-    async def create_todo(self, todo_data: TodoCreateRequest) -> TodoModel:
-        todo = await self.todo_repository.create_todo(todo_data)
+
+    async def create_todo_list(self, todo_data: TodoListCreateRequest) -> TodoListModel:
+        """Create a new todo list.
+
+        Args:
+            todo_data (TodoListCreateRequest): Data for creating a new todo list including title
+                and optional description.
+
+        Returns:
+            TodoListModel: The created TodoListModel instance with assigned ID.
+
+        """
+        return await self.todo_repository.create_todo_list(todo_data)
+
+    async def get_todo_list_by_id(self, todo_id: int) -> TodoListModel:
+        """Get a todo list by ID.
+
+        Args:
+            todo_id (int): ID of the todo list to retrieve.
+
+        Returns:
+            TodoListModel: The TodoListModel instance.
+
+        Raises:
+            TodoListNotFoundError: If the todo list with the given ID is not found.
+
+        """
+        todo = await self.todo_repository.get_todo_list_by_id(todo_id)
+        if not todo:
+            raise TodoListNotFoundError(todo_id)
         return todo
 
-    async def get_todo(self, todo_id: int) -> Optional[TodoModel]:
-        todo = await self.todo_repository.get_todo_by_id(todo_id)
-        return todo if todo else None
+    async def get_all_todo_lists_without_items(self, skip: int = 0, limit: int = 100) -> list[TodoListModel]:
+        """Get all todo lists with pagination (without their own list items).
 
-    async def get_all_todos(self, skip: int = 0, limit: int = 100) -> List[TodoModel]:
-        todos = await self.todo_repository.get_all_todos(skip, limit)
-        return todos
+        Args:
+            skip (int, optional): Number of records to skip for pagination. Defaults to 0.
+            limit (int, optional): Maximum number of records to return. Defaults to 100.
 
-    async def update_todo(self, todo_id: int, todo_data: TodoUpdateRequest) -> Optional[TodoModel]:
-        todo = await self.todo_repository.update_todo(todo_id, todo_data)
-        return todo if todo else None
+        Returns:
+            list[TodoListModel]: List of TodoListModel instances with pagination applied.
 
-    async def delete_todo(self, todo_id: int) -> bool:
-        return await self.todo_repository.delete_todo(todo_id)
-    
-    async def add_todo_item(self, todo_id: int, item_data: TodoItemsAddRequest) -> Optional[TodoItemModel]:
-        item = await self.todo_repository.add_todo_item(todo_id, item_data)
-        return item if item else None
+        """
+        return await self.todo_repository.get_all_todo_lists(skip, limit)
 
-    async def get_todo_items(self, todo_id: int, skip: int = 0, limit: int = 100) -> List[TodoItemModel]:
-        items = await self.todo_repository.get_todo_items(todo_id, skip, limit)
-        return items
+    async def update_todo_list(self, todo_id: int, todo_data: TodoListUpdateRequest) -> TodoListModel:
+        """Update an existing todo list.
 
-    async def update_todo_item(self, todo_id: int, item_id: int, item_data: TodoItemUpdateRequest) -> Optional[TodoItemModel]:
-        item = await self.todo_repository.update_todo_item(todo_id, item_id, item_data)
-        return item if item else None
+        Args:
+            todo_id (int): ID of the todo list to update.
+            todo_data (TodoListUpdateRequest): Updated data for the todo list.
 
-    async def delete_todo_item(self, todo_id: int, item_id: int) -> bool:
-        return await self.todo_repository.delete_todo_item(todo_id, item_id)
-    
+        Returns:
+            TodoListModel: The updated TodoListModel instance.
+
+        Raises:
+            TodoListNotFoundError: If the todo list with the given ID is not found.
+
+        """
+        todo = await self.todo_repository.update_todo_list(todo_id, todo_data)
+        if not todo:
+            raise TodoListNotFoundError(todo_id)
+        return todo
+
+    async def delete_todo_list(self, todo_id: int) -> None:
+        """Delete a todo list.
+
+        Args:
+            todo_id (int): ID of the todo list to delete.
+
+        Raises:
+            TodoListNotFoundError: If the todo list with the given ID is not found.
+
+        """
+        success = await self.todo_repository.delete_todo_list(todo_id)
+        if not success:
+            raise TodoListNotFoundError(todo_id)
+
+
+    async def add_todo_list_item(self, todo_id: int, item_data: TodoListItemsAddRequest) -> TodoListItemModel:
+        """Add a new item to a todo list.
+
+        Args:
+            todo_id (int): ID of the todo list to which the item will be added.
+            item_data (TodoListItemsAddRequest): Data for the new todo item including title
+                and optional description.
+
+        Returns:
+            TodoListItemModel: The created TodoListItemModel instance.
+
+        Raises:
+            TodoListNotFoundError: If the todo list with the given ID is not found.
+
+        """
+        item = await self.todo_repository.add_todo_list_item(todo_id, item_data)
+        if not item:
+            raise TodoListNotFoundError(todo_id)
+        return item
+
+    async def get_todo_list_items(self, todo_id: int, skip: int = 0, limit: int = 100) -> list[TodoListItemModel]:
+        """Get all items for a todo list with pagination.
+
+        Args:
+            todo_id (int): ID of the todo list.
+            skip (int, optional): Number of records to skip for pagination. Defaults to 0.
+            limit (int, optional): Maximum number of records to return. Defaults to 100.
+
+        Returns:
+            list[TodoListItemModel]: List of TodoListItemModel instances with pagination applied.
+
+        Raises:
+            TodoListNotFoundError: If the todo list with the given ID is not found.
+
+        """
+        return await self.todo_repository.get_todo_list_items(todo_id, skip, limit)
+
+    async def update_todo_item(
+        self,
+        todo_id: int,
+        item_id: int,
+        item_data: TodoListItemUpdateRequest,
+    ) -> TodoListItemModel:
+        """Update a specific item within a todo list.
+
+        Args:
+            todo_id (int): ID of the todo list containing the item.
+            item_id (int): ID of the item to update.
+            item_data (TodoListItemUpdateRequest): Partial Updated data for the todo item.
+
+        Returns:
+            TodoListItemModel: The updated TodoListItemModel instance.
+
+        Raises:
+            TodoListItemNotFoundError: If the todo list or item with the given IDs is not found.
+
+        """
+        item = await self.todo_repository.update_todo_list_item(todo_id, item_id, item_data)
+        if not item:
+            raise TodoListItemNotFoundError(todo_id, item_id)
+
+        return item
+
+    async def delete_todo_list_item(self, todo_id: int, item_id: int) -> None:
+        """Delete a todo item from a todo list.
+
+        Args:
+            todo_id (int): ID of the todo list.
+            item_id (int): ID of the todo item to delete.
+
+        Raises:
+            TodoListItemNotFoundError: If the todo list or item with the given IDs is not found.
+
+        """
+        success = await self.todo_repository.delete_todo_list_item(todo_id, item_id)
+        if not success:
+            raise TodoListItemNotFoundError(todo_id, item_id)

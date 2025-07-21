@@ -37,7 +37,17 @@ done
 
 echo "PostgreSQL is ready!"
 
+# Run Alembic migrations
+echo "Running Alembic migrations..."
 
+
+# Run pending migrations
+echo "Applying database migrations..."
+uv run alembic upgrade head
+
+echo "Database migrations completed successfully!"
+
+uv run run.py
 echo "Setup completed successfully!"
 
 

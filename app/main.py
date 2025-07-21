@@ -1,35 +1,21 @@
+"""Main application entry point for the FastAPI Todo application.
+
+This file initializes the FastAPI app, sets up the lifespan context manager,
+and configures the application with custom settings.
+"""
 from fastapi import FastAPI
 
-from contextlib import asynccontextmanager
-from app.config.server import Server
-from app.config.settings import SETTINGS
-from app.config.database import database
+from app.dependencies import get_env_settings
+from app.interfaces.api.v1.controllers.health_check_controller import router as health_routes
+from app.interfaces.api.v1.controllers.todo_controller import router as todo_router
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup logic
-    print("App is starting...")
-    
-    server = Server(app)
-    server.start()
-    
-    # Application running
-    yield
-    
-    # Shutdown logic
-    print("App is shutting down...")
-    
-    
-    server.stop()
-
-
-# FastAPI app with custom configuration for Swagger
 app = FastAPI(
-    title=SETTINGS.app_name,
-    description=SETTINGS.app_description,
-    version=SETTINGS.app_version,
-    docs_url="/docs",  # Swagger UI
-    redoc_url="/redoc",  # ReDoc
-    lifespan=lifespan,  # Custom lifespan for startup/shutdown events
+    title=get_env_settings().app_name,
+    description=get_env_settings().app_description,
+    version=get_env_settings().app_version,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
+app.include_router(todo_router, prefix="/api/v1")
+app.include_router(health_routes, prefix="/api/v1")
