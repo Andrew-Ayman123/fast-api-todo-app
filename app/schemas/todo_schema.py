@@ -96,19 +96,31 @@ class TodoListItemResponse(BaseEntitySchema):
     completed: bool = False
 
 
+
 class TodoListResponse(BaseEntitySchema):
-    """Schema for todo list response data.
-
-    Args:
-        title (str): The title of the todo list.
-        description (str, optional): Optional description of the todo list. Defaults to None.
-        todo_items (list[TodoListItemResponse], optional): List of todo items in this todo list. Defaults to None.
-
-    """
+    """Schema for todo list response data."""
 
     title: str
     description: str | None = None
     todo_items: list[TodoListItemResponse] | None = None
+
+
+class PaginatedTodoListResponse(BaseModel):
+    """Paginated response for todo lists."""
+
+    data: list[TodoListResponse]
+    size: int
+    current_page: int
+    total_pages: int
+
+
+class PaginatedTodoListItemResponse(BaseModel):
+    """Paginated response for todo list items."""
+
+    data: list[TodoListItemResponse]
+    size: int
+    current_page: int
+    total_pages: int
 
 
 class TodoListCreateManyRequest(BaseModel):

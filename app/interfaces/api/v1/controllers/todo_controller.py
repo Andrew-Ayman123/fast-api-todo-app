@@ -20,6 +20,8 @@ from app.schemas.todo_schema import (
     TodoListResponse,
     TodoListUpdateManyRequest,
     TodoListUpdateRequest,
+    PaginatedTodoListResponse,
+    PaginatedTodoListItemResponse,
 )
 from app.services.todo_service import TodoService
 
@@ -78,35 +80,44 @@ async def create_todo_list(
         raise HTTPException(status_code=500, detail=f"Failed to create todo list: {e!s}") from e
 
 
-@router.get("/")
+@router.get("/", response_model=PaginatedTodoListResponse)
 async def get_todo_lists(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    skip: int = 0,
-    limit: int = 100,
-) -> list[TodoListResponse]:
+    page: int = 1,
+    size: int = 20,
+) -> PaginatedTodoListResponse:
     """Retrieve all todo lists with pagination.
 
     Args:
         todo_service (TodoService): The todo service dependency
-        skip (int, optional): Number of todos to skip. Defaults to 0.
-        limit (int, optional): Maximum number of todos to return. Defaults to 100.
+        page (int, optional): Page number. Defaults to 1.
+        size (int, optional): Page size. Defaults to 20.
 
     Returns:
-        list[TodoListResponse]: List of todos with pagination applied
+        PaginatedTodoListResponse: Paginated list of todos
 
     Raises:
         HTTPException: 404 - Not Found
 
     """
     try:
-        todos = await todo_service.get_all_todo_lists_without_items(skip, limit)
-        return [_convert_todo_to_response(todo) for todo in todos]
+        skip = (page - 1) * size
+        todos = await todo_service.get_all_todo_lists_without_items(skip, size)
+        total = await todo_service.count_todo_lists()
+        total = total if total is not None else (skip + len(todos))
+        total_pages = (total + size - 1) // size if size > 0 else 1
+        return PaginatedTodoListResponse(
+            data=[_convert_todo_to_response(todo) for todo in todos],
+            size=len(todos),
+            current_page=page,
+            total_pages=total_pages,
+        )
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to retrieve todo lists: {e!s}") from e
 
 
 @router.get("/{todo_id}")
-async def get_todo_list(
+async def get_todo_list_by_id(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     todo_id: int,
 ) -> TodoListResponse:
@@ -190,23 +201,23 @@ async def delete_todo_list(
         raise HTTPException(status_code=500, detail=f"Failed to delete todo: {e!s}") from e
 
 
-@router.get("/{todo_id}/items")
+@router.get("/{todo_id}/items", response_model=PaginatedTodoListItemResponse)
 async def get_todo_list_items(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     todo_id: int,
-    skip: int = 0,
-    limit: int = 100,
-) -> list[TodoListItemResponse]:
+    page: int = 1,
+    size: int = 20,
+) -> PaginatedTodoListItemResponse:
     """Retrieve all items from a specific todo with pagination.
 
     Args:
         todo_service (TodoService): The todo service dependency
         todo_id (int): The unique identifier of the todo
-        skip (int, optional): Number of items to skip. Defaults to 0.
-        limit (int, optional): Maximum number of items to return. Defaults to 100.
+        page (int, optional): Page number. Defaults to 1.
+        size (int, optional): Page size. Defaults to 20.
 
     Returns:
-        list[TodoListItemResponse]: List of todo items with pagination applied
+        PaginatedTodoListItemResponse: Paginated list of todo items
 
     Raises:
         HTTPException: 404 - Todo not found
@@ -214,8 +225,17 @@ async def get_todo_list_items(
 
     """
     try:
-        items = await todo_service.get_todo_list_items(todo_id, skip, limit)
-        return [_convert_todo_item_to_response(item) for item in items]
+        skip = (page - 1) * size
+        items = await todo_service.get_todo_list_items(todo_id, skip, size)
+        total = await todo_service.count_todo_list_items(todo_id)
+        total = total if total is not None else (skip + len(items))
+        total_pages = (total + size - 1) // size if size > 0 else 1
+        return PaginatedTodoListItemResponse(
+            data=[_convert_todo_item_to_response(item) for item in items],
+            size=len(items),
+            current_page=page,
+            total_pages=total_pages,
+        )
     except TodoListNotFoundError as e:
         raise HTTPException(status_code=404, detail="Todo not found") from e
     except Exception as e:

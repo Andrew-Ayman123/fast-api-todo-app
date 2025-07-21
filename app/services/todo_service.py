@@ -305,3 +305,11 @@ class TodoService:
             success = await self.todo_repository.delete_todo_list_item(todo_id, item_id)
             if not success:
                 raise TodoListItemNotFoundError(todo_id, item_id)
+
+    async def count_todo_lists(self) -> int:
+        """Count the total number of todo lists in the database."""
+        return await self.todo_repository.count_todo_lists()
+
+    async def count_todo_list_items(self, todo_id: int) -> int:
+        """Count the total number of items in a specific todo list."""
+        return await self.todo_repository.count_todo_list_items(todo_id)

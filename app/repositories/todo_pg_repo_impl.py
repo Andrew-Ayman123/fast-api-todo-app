@@ -3,7 +3,7 @@
 This module provides a PostgreSQL implementation of the TodoRepositoryInterface
 using SQLAlchemy ORM for database operations.
 """
-from sqlalchemy import Select, delete, update
+from sqlalchemy import Select, delete, func, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -22,6 +22,8 @@ from app.utils.logger_util import get_logger
 
 
 class TodoPGRepository(TodoRepositoryInterface):
+
+    
     """PostgreSQL implementation of Todo repository using SQLAlchemy ORM."""
 
     def __init__(self, database: DatabaseConnection) -> None:
@@ -340,3 +342,17 @@ class TodoPGRepository(TodoRepositoryInterface):
             else:
                 get_logger().warning("Todo item ID: %s not found in todo list ID: %s for deletion", item_id, todo_id)
             return deleted
+
+    async def count_todo_lists(self) -> int:
+        """Count the total number of todo lists in the database."""
+        async with self.database.async_session() as session:
+            query = select(func.count()).select_from(TodoListModel)
+            result = await session.execute(query)
+            return result.scalar_one()
+
+    async def count_todo_list_items(self, todo_id: int) -> int:
+        """Count the total number of items in a specific todo list."""
+        async with self.database.async_session() as session:
+            query = select(func.count()).select_from(TodoListItemModel).where(TodoListItemModel.todo_id == todo_id)
+            result = await session.execute(query)
+            return result.scalar_one()
