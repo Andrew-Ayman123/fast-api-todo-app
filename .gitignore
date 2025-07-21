@@ -1,0 +1,14 @@
+.venv/ 
+*.env
+.coverage
+
+# Alembic
+alembic/versions/
+
+# vscode settings
+.vscode/
+
+# python cache
+__pycache__/
+*.pyc
+*.pyo
