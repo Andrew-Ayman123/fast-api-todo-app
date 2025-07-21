@@ -189,3 +189,119 @@ class TodoService:
         success = await self.todo_repository.delete_todo_list_item(todo_id, item_id)
         if not success:
             raise TodoListItemNotFoundError(todo_id, item_id)
+
+    async def create_many_todo_lists(self, todo_lists: list[TodoListCreateRequest]) -> list[TodoListModel]:
+        """Create multiple todo lists.
+
+        Args:
+            todo_lists (list[TodoListCreateRequest]): List of todo lists to create.
+
+        Returns:
+            list[TodoListModel]: List of created todo lists.
+
+        """
+        created_todos = []
+        for todo_data in todo_lists:
+            created_todo = await self.todo_repository.create_todo_list(todo_data)
+            created_todos.append(created_todo)
+        return created_todos
+
+    async def update_many_todo_lists(self, updates: list) -> list[TodoListModel]:
+        """Update multiple todo lists.
+
+        Args:
+            updates (list): List of update objects with id and update data.
+
+        Returns:
+            list[TodoListModel]: List of updated todo lists.
+
+        Raises:
+            TodoListNotFoundError: If any todo list with the given IDs is not found.
+
+        """
+        updated_todos = []
+        for update in updates:
+            todo_id = update.id
+            todo_data = update.data
+            updated_todo = await self.todo_repository.update_todo_list(todo_id, todo_data)
+            if not updated_todo:
+                raise TodoListNotFoundError(todo_id)
+            updated_todos.append(updated_todo)
+        return updated_todos
+
+    async def delete_many_todo_lists(self, todo_ids: list[int]) -> None:
+        """Delete multiple todo lists.
+
+        Args:
+            todo_ids (list[int]): List of todo list IDs to delete.
+
+        Raises:
+            TodoListNotFoundError: If any todo list with the given IDs is not found.
+
+        """
+        for todo_id in todo_ids:
+            success = await self.todo_repository.delete_todo_list(todo_id)
+            if not success:
+                raise TodoListNotFoundError(todo_id)
+
+    async def create_many_todo_list_items(self, todo_id: int, items: list) -> list[TodoListItemModel]:
+        """Add multiple items to a todo list.
+
+        Args:
+            todo_id (int): ID of the todo list to add items to.
+            items (list): List of todo items to add.
+
+        Returns:
+            list[TodoListItemModel]: List of created todo list items.
+
+        Raises:
+            TodoListNotFoundError: If the todo list with the given ID is not found.
+
+        """
+        created_items = []
+        for item_data in items:
+            created_item = await self.todo_repository.add_todo_list_item(todo_id, item_data)
+            if not created_item:
+                raise TodoListNotFoundError(todo_id)
+            created_items.append(created_item)
+        return created_items
+
+    async def update_many_todo_list_items(self, todo_id: int, updates: list) -> list[TodoListItemModel]:
+        """Update multiple todo list items.
+
+        Args:
+            todo_id (int): ID of the todo list containing the items.
+            updates (list): List of update objects with id and update data.
+
+        Returns:
+            list[TodoListItemModel]: List of updated todo list items.
+
+        Raises:
+            TodoListItemNotFoundError: If any todo list item with the given IDs is not found.
+
+        """
+        updated_items = []
+        for update in updates:
+            item_id = update.id
+            item_data = update.data
+            updated_item = await self.todo_repository.update_todo_list_item(todo_id, item_id, item_data)
+            if not updated_item:
+                raise TodoListItemNotFoundError(todo_id, item_id)
+            updated_items.append(updated_item)
+        return updated_items
+
+    async def delete_many_todo_list_items(self, todo_id: int, item_ids: list[int]) -> None:
+        """Delete multiple todo list items.
+
+        Args:
+            todo_id (int): ID of the todo list containing the items.
+            item_ids (list[int]): List of todo list item IDs to delete.
+
+        Raises:
+            TodoListItemNotFoundError: If any todo list item with the given IDs is not found.
+
+        """
+        for item_id in item_ids:
+            success = await self.todo_repository.delete_todo_list_item(todo_id, item_id)
+            if not success:
+                raise TodoListItemNotFoundError(todo_id, item_id)

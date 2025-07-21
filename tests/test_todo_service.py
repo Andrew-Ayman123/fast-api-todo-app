@@ -311,3 +311,150 @@ class TestTodoService:
 
         assert len(result) == 2
         assert result == expected_items
+
+    # Tests for batch operations - Todo Lists
+    async def test_create_many_todo_lists_success(self, todo_service, mock_todo_repository, sample_todo_create_request):
+        """Test successful creation of multiple todo lists."""
+        todo1 = TodoListModel(id=1, title="Todo 1", description="Description 1", created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+        todo2 = TodoListModel(id=2, title="Todo 2", description="Description 2", created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+        
+        mock_todo_repository.create_todo_list.side_effect = [todo1, todo2]
+        
+        todo_requests = [sample_todo_create_request, sample_todo_create_request]
+        result = await todo_service.create_many_todo_lists(todo_requests)
+        
+        assert len(result) == 2
+        assert result == [todo1, todo2]
+        assert mock_todo_repository.create_todo_list.call_count == 2
+
+    async def test_update_many_todo_lists_success(self, todo_service, mock_todo_repository, sample_todo_update_request):
+        """Test successful update of multiple todo lists."""
+        todo1 = TodoListModel(id=1, title="Updated Todo 1", description="Updated Description 1", created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+        todo2 = TodoListModel(id=2, title="Updated Todo 2", description="Updated Description 2", created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+        
+        mock_todo_repository.update_todo_list.side_effect = [todo1, todo2]
+        
+        # Create mock update objects
+        update1 = MagicMock()
+        update1.id = 1
+        update1.data = sample_todo_update_request
+        update2 = MagicMock()
+        update2.id = 2
+        update2.data = sample_todo_update_request
+        
+        updates = [update1, update2]
+        result = await todo_service.update_many_todo_lists(updates)
+        
+        assert len(result) == 2
+        assert result == [todo1, todo2]
+        assert mock_todo_repository.update_todo_list.call_count == 2
+
+    async def test_update_many_todo_lists_not_found(self, todo_service, mock_todo_repository, sample_todo_update_request):
+        """Test TodoListNotFoundError when updating non-existent todo list."""
+        mock_todo_repository.update_todo_list.return_value = None
+        
+        update1 = MagicMock()
+        update1.id = 999
+        update1.data = sample_todo_update_request
+        
+        with pytest.raises(TodoListNotFoundError) as exc_info:
+            await todo_service.update_many_todo_lists([update1])
+        
+        assert exc_info.value.todo_id == 999
+
+    async def test_delete_many_todo_lists_success(self, todo_service, mock_todo_repository):
+        """Test successful deletion of multiple todo lists."""
+        mock_todo_repository.delete_todo_list.return_value = True
+        
+        todo_ids = [1, 2, 3]
+        await todo_service.delete_many_todo_lists(todo_ids)
+        
+        assert mock_todo_repository.delete_todo_list.call_count == 3
+
+    async def test_delete_many_todo_lists_not_found(self, todo_service, mock_todo_repository):
+        """Test TodoListNotFoundError when deleting non-existent todo list."""
+        mock_todo_repository.delete_todo_list.return_value = False
+        
+        with pytest.raises(TodoListNotFoundError) as exc_info:
+            await todo_service.delete_many_todo_lists([999])
+        
+        assert exc_info.value.todo_id == 999
+
+    # Tests for batch operations - Todo List Items
+    async def test_create_many_todo_list_items_success(self, todo_service, mock_todo_repository, sample_item_add_request):
+        """Test successful creation of multiple todo list items."""
+        item1 = TodoListItemModel(id=1, todo_id=1, title="Item 1", description="Description 1", completed=False, created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+        item2 = TodoListItemModel(id=2, todo_id=1, title="Item 2", description="Description 2", completed=False, created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+        
+        mock_todo_repository.add_todo_list_item.side_effect = [item1, item2]
+        
+        item_requests = [sample_item_add_request, sample_item_add_request]
+        result = await todo_service.create_many_todo_list_items(1, item_requests)
+        
+        assert len(result) == 2
+        assert result == [item1, item2]
+        assert mock_todo_repository.add_todo_list_item.call_count == 2
+
+    async def test_create_many_todo_list_items_todo_not_found(self, todo_service, mock_todo_repository, sample_item_add_request):
+        """Test TodoListNotFoundError when adding items to non-existent todo list."""
+        mock_todo_repository.add_todo_list_item.return_value = None
+        
+        with pytest.raises(TodoListNotFoundError) as exc_info:
+            await todo_service.create_many_todo_list_items(999, [sample_item_add_request])
+        
+        assert exc_info.value.todo_id == 999
+
+    async def test_update_many_todo_list_items_success(self, todo_service, mock_todo_repository, sample_item_update_request):
+        """Test successful update of multiple todo list items."""
+        item1 = TodoListItemModel(id=1, todo_id=1, title="Updated Item 1", description="Updated Description 1", completed=True, created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+        item2 = TodoListItemModel(id=2, todo_id=1, title="Updated Item 2", description="Updated Description 2", completed=True, created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+        
+        mock_todo_repository.update_todo_list_item.side_effect = [item1, item2]
+        
+        # Create mock update objects
+        update1 = MagicMock()
+        update1.id = 1
+        update1.data = sample_item_update_request
+        update2 = MagicMock()
+        update2.id = 2
+        update2.data = sample_item_update_request
+        
+        updates = [update1, update2]
+        result = await todo_service.update_many_todo_list_items(1, updates)
+        
+        assert len(result) == 2
+        assert result == [item1, item2]
+        assert mock_todo_repository.update_todo_list_item.call_count == 2
+
+    async def test_update_many_todo_list_items_not_found(self, todo_service, mock_todo_repository, sample_item_update_request):
+        """Test TodoListItemNotFoundError when updating non-existent todo list item."""
+        mock_todo_repository.update_todo_list_item.return_value = None
+        
+        update1 = MagicMock()
+        update1.id = 999
+        update1.data = sample_item_update_request
+        
+        with pytest.raises(TodoListItemNotFoundError) as exc_info:
+            await todo_service.update_many_todo_list_items(1, [update1])
+        
+        assert exc_info.value.todo_id == 1
+        assert exc_info.value.item_id == 999
+
+    async def test_delete_many_todo_list_items_success(self, todo_service, mock_todo_repository):
+        """Test successful deletion of multiple todo list items."""
+        mock_todo_repository.delete_todo_list_item.return_value = True
+        
+        item_ids = [1, 2, 3]
+        await todo_service.delete_many_todo_list_items(1, item_ids)
+        
+        assert mock_todo_repository.delete_todo_list_item.call_count == 3
+
+    async def test_delete_many_todo_list_items_not_found(self, todo_service, mock_todo_repository):
+        """Test TodoListItemNotFoundError when deleting non-existent todo list item."""
+        mock_todo_repository.delete_todo_list_item.return_value = False
+        
+        with pytest.raises(TodoListItemNotFoundError) as exc_info:
+            await todo_service.delete_many_todo_list_items(1, [999])
+        
+        assert exc_info.value.todo_id == 1
+        assert exc_info.value.item_id == 999

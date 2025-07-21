@@ -109,3 +109,114 @@ class TodoListResponse(BaseEntitySchema):
     title: str
     description: str | None = None
     todo_items: list[TodoListItemResponse] | None = None
+
+
+class TodoListCreateManyRequest(BaseModel):
+    """Schema for creating multiple todo lists.
+
+    Args:
+        todo_lists (list[TodoListCreateRequest]): List of todo lists to create.
+
+    """
+
+    todo_lists: list[TodoListCreateRequest]
+
+
+class TodoListUpdateItem(BaseModel):
+    """Schema for updating a single todo list in batch operation.
+
+    Args:
+        id (int): ID of the todo list to update.
+        data (TodoListUpdateRequest): Update data for the todo list.
+
+    """
+
+    id: int
+    data: TodoListUpdateRequest
+
+
+class TodoListUpdateManyRequest(BaseModel):
+    """Schema for updating multiple todo lists.
+
+    Args:
+        updates (list[TodoListUpdateItem]): List of update objects with id and update data.
+
+    """
+
+    updates: list[TodoListUpdateItem]
+
+
+class TodoListDeleteManyRequest(BaseModel):
+    """Schema for deleting multiple todo lists.
+
+    Args:
+        todo_ids (list[int]): List of todo list IDs to delete.
+
+    """
+
+    todo_ids: list[int]
+
+
+class TodoListItemCreateManyRequest(BaseModel):
+    """Schema for adding multiple items to a todo list.
+
+    Args:
+        todo_id (int): ID of the todo list to add items to.
+        items (list[TodoListItemsAddRequest]): List of todo items to add.
+
+    """
+
+    todo_id: int
+    items: list[TodoListItemsAddRequest]
+
+
+class TodoListItemUpdateItem(BaseModel):
+    """Schema for updating a single todo list item in batch operation.
+
+    Args:
+        id (int): ID of the todo list item to update.
+        data (TodoListItemUpdateRequest): Update data for the todo list item.
+
+    """
+
+    id: int
+    data: TodoListItemUpdateRequest
+
+
+class TodoListItemUpdateManyRequest(BaseModel):
+    """Schema for updating multiple todo list items.
+
+    Args:
+        todo_id (int): ID of the todo list containing the items.
+        updates (list[TodoListItemUpdateItem]): List of update objects with id and update data.
+
+    """
+
+    todo_id: int
+    updates: list[TodoListItemUpdateItem]
+
+
+class TodoListItemDeleteManyRequest(BaseModel):
+    """Schema for deleting multiple todo list items.
+
+    Args:
+        todo_id (int): ID of the todo list containing the items.
+        item_ids (list[int]): List of todo list item IDs to delete.
+
+    """
+
+    todo_id: int
+    item_ids: list[int]
+
+
+class SuccessResponse(BaseModel):
+    """Schema for success response.
+
+    Args:
+        success (bool): Indicates if the operation was successful.
+        message (str): Success message.
+
+    """
+
+    success: bool = True
+    message: str

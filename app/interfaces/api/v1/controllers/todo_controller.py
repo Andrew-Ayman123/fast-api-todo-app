@@ -7,11 +7,18 @@ from app.dependencies import get_todo_service
 from app.exceptions.todo_exception import TodoListItemNotFoundError, TodoListNotFoundError
 from app.models.todo_model import TodoListItemModel, TodoListModel
 from app.schemas.todo_schema import (
+    SuccessResponse,
+    TodoListCreateManyRequest,
     TodoListCreateRequest,
+    TodoListDeleteManyRequest,
+    TodoListItemCreateManyRequest,
+    TodoListItemDeleteManyRequest,
     TodoListItemResponse,
     TodoListItemsAddRequest,
+    TodoListItemUpdateManyRequest,
     TodoListItemUpdateRequest,
     TodoListResponse,
+    TodoListUpdateManyRequest,
     TodoListUpdateRequest,
 )
 from app.services.todo_service import TodoService
@@ -306,3 +313,178 @@ async def delete_todo_list_item(
         raise HTTPException(status_code=404, detail="Todo or item not found") from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete todo item: {e!s}") from e
+
+
+@router.post("/batch")
+async def create_many_todo_lists(
+    request: TodoListCreateManyRequest,
+    todo_service: Annotated[TodoService, Depends(get_todo_service)],
+) -> SuccessResponse:
+    """Create multiple todo lists at once.
+
+    Args:
+        todo_service (TodoService): The todo service dependency
+        request (TodoListCreateManyRequest): List of todo lists to create
+
+    Returns:
+        SuccessResponse: Success message with created count
+
+    Raises:
+        HTTPException: 422 - Validation error if request data is invalid
+        HTTPException: 500 - Internal server error
+
+    """
+    try:
+        created_todos = await todo_service.create_many_todo_lists(request.todo_lists)
+        return SuccessResponse(message=f"Successfully created {len(created_todos)} todo lists")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create todo lists: {e!s}") from e
+
+
+@router.put("/batch")
+async def update_many_todo_lists(
+    request: TodoListUpdateManyRequest,
+    todo_service: Annotated[TodoService, Depends(get_todo_service)],
+) -> SuccessResponse:
+    """Update multiple todo lists at once.
+
+    Args:
+        todo_service (TodoService): The todo service dependency
+        request (TodoListUpdateManyRequest): List of updates with todo IDs and update data
+
+    Returns:
+        SuccessResponse: Success message with updated count
+
+    Raises:
+        HTTPException: 404 - One or more todos not found
+        HTTPException: 422 - Validation error if request data is invalid
+        HTTPException: 500 - Internal server error
+
+    """
+    try:
+        updated_todos = await todo_service.update_many_todo_lists(request.updates)
+        return SuccessResponse(message=f"Successfully updated {len(updated_todos)} todo lists")
+    except TodoListNotFoundError as e:
+        raise HTTPException(status_code=404, detail="One or more todos not found") from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update todo lists: {e!s}") from e
+
+
+@router.delete("/batch", status_code=200)
+async def delete_many_todo_lists(
+    request: TodoListDeleteManyRequest,
+    todo_service: Annotated[TodoService, Depends(get_todo_service)],
+) -> SuccessResponse:
+    """Delete multiple todo lists at once.
+
+    Args:
+        todo_service (TodoService): The todo service dependency
+        request (TodoListDeleteManyRequest): List of todo IDs to delete
+
+    Returns:
+        SuccessResponse: Success message with deleted count
+
+    Raises:
+        HTTPException: 404 - One or more todos not found
+        HTTPException: 500 - Internal server error
+
+    """
+    try:
+        await todo_service.delete_many_todo_lists(request.todo_ids)
+        return SuccessResponse(message=f"Successfully deleted {len(request.todo_ids)} todo lists")
+    except TodoListNotFoundError as e:
+        raise HTTPException(status_code=404, detail="One or more todos not found") from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete todo lists: {e!s}") from e
+
+
+@router.post("/{todo_id}/items/batch")
+async def create_many_todo_list_items(
+    todo_id: int,
+    request: TodoListItemCreateManyRequest,
+    todo_service: Annotated[TodoService, Depends(get_todo_service)],
+) -> SuccessResponse:
+    """Add multiple items to a specific todo list.
+
+    Args:
+        todo_id (int): The unique identifier of the todo list
+        todo_service (TodoService): The todo service dependency
+        request (TodoListItemCreateManyRequest): List of todo items to add
+
+    Returns:
+        SuccessResponse: Success message with created count
+
+    Raises:
+        HTTPException: 404 - Todo list not found
+        HTTPException: 422 - Validation error if request data is invalid
+        HTTPException: 500 - Internal server error
+
+    """
+    try:
+        created_items = await todo_service.create_many_todo_list_items(todo_id, request.items)
+        return SuccessResponse(message=f"Successfully created {len(created_items)} todo items")
+    except TodoListNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Todo list not found") from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create todo items: {e!s}") from e
+
+
+@router.put("/{todo_id}/items/batch")
+async def update_many_todo_list_items(
+    todo_id: int,
+    request: TodoListItemUpdateManyRequest,
+    todo_service: Annotated[TodoService, Depends(get_todo_service)],
+) -> SuccessResponse:
+    """Update multiple items in a specific todo list.
+
+    Args:
+        todo_id (int): The unique identifier of the todo list
+        todo_service (TodoService): The todo service dependency
+        request (TodoListItemUpdateManyRequest): List of updates with item IDs and update data
+
+    Returns:
+        SuccessResponse: Success message with updated count
+
+    Raises:
+        HTTPException: 404 - Todo list or one or more items not found
+        HTTPException: 422 - Validation error if request data is invalid
+        HTTPException: 500 - Internal server error
+
+    """
+    try:
+        updated_items = await todo_service.update_many_todo_list_items(todo_id, request.updates)
+        return SuccessResponse(message=f"Successfully updated {len(updated_items)} todo items")
+    except TodoListItemNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Todo list or one or more items not found") from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update todo items: {e!s}") from e
+
+
+@router.delete("/{todo_id}/items/batch", status_code=200)
+async def delete_many_todo_list_items(
+    todo_id: int,
+    request: TodoListItemDeleteManyRequest,
+    todo_service: Annotated[TodoService, Depends(get_todo_service)],
+) -> SuccessResponse:
+    """Delete multiple items from a specific todo list.
+
+    Args:
+        todo_id (int): The unique identifier of the todo list
+        todo_service (TodoService): The todo service dependency
+        request (TodoListItemDeleteManyRequest): List of item IDs to delete
+
+    Returns:
+        SuccessResponse: Success message with deleted count
+
+    Raises:
+        HTTPException: 404 - Todo list or one or more items not found
+        HTTPException: 500 - Internal server error
+
+    """
+    try:
+        await todo_service.delete_many_todo_list_items(todo_id, request.item_ids)
+        return SuccessResponse(message=f"Successfully deleted {len(request.item_ids)} todo items")
+    except TodoListItemNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Todo list or one or more items not found") from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete todo items: {e!s}") from e

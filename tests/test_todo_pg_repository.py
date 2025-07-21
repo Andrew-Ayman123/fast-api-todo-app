@@ -561,3 +561,81 @@ class TestTodoPGRepository:
         # Verify items are also deleted (should return empty list for non-existent todo)
         items_after = await repository.get_todo_list_items(created_todo.id)
         assert len(items_after) == 0
+
+    @pytest.mark.asyncio
+    async def test_multiple_todo_list_operations_integration(
+        self, 
+        repository: TodoPGRepository, 
+        sample_todo_data: TodoListCreateRequest
+    ) -> None:
+        """Integration test for creating, updating, and deleting multiple todo lists."""
+        # Create multiple todo lists
+        todo1 = await repository.create_todo_list(sample_todo_data)
+        todo2_data = TodoListCreateRequest(title="Second Todo", description="Second description")
+        todo2 = await repository.create_todo_list(todo2_data)
+        todo3_data = TodoListCreateRequest(title="Third Todo", description="Third description")
+        todo3 = await repository.create_todo_list(todo3_data)
+
+        # Verify all created
+        assert todo1.id is not None
+        assert todo2.id is not None
+        assert todo3.id is not None
+
+        # Update multiple
+        update_data = TodoListUpdateRequest(title="Updated Title", description="Updated description")
+        updated1 = await repository.update_todo_list(todo1.id, update_data)
+        updated2 = await repository.update_todo_list(todo2.id, update_data)
+
+        assert updated1.title == "Updated Title"
+        assert updated2.title == "Updated Title"
+
+        # Delete multiple
+        delete_result1 = await repository.delete_todo_list(todo1.id)
+        delete_result2 = await repository.delete_todo_list(todo2.id)
+        delete_result3 = await repository.delete_todo_list(todo3.id)
+
+        assert delete_result1 is True
+        assert delete_result2 is True
+        assert delete_result3 is True
+
+    @pytest.mark.asyncio
+    async def test_multiple_todo_item_operations_integration(
+        self, 
+        repository: TodoPGRepository, 
+        sample_todo_data: TodoListCreateRequest,
+        sample_todo_item_data: TodoListItemsAddRequest
+    ) -> None:
+        """Integration test for creating, updating, and deleting multiple todo items."""
+        # Create parent todo
+        todo = await repository.create_todo_list(sample_todo_data)
+
+        # Create multiple items
+        item1 = await repository.add_todo_list_item(todo.id, sample_todo_item_data)
+        item2_data = TodoListItemsAddRequest(title="Second Item", description="Second item description")
+        item2 = await repository.add_todo_list_item(todo.id, item2_data)
+        item3_data = TodoListItemsAddRequest(title="Third Item", description="Third item description")
+        item3 = await repository.add_todo_list_item(todo.id, item3_data)
+
+        # Verify all created
+        assert item1.id is not None
+        assert item2.id is not None
+        assert item3.id is not None
+
+        # Update multiple
+        update_data = TodoListItemUpdateRequest(title="Updated Item", completed=True)
+        updated1 = await repository.update_todo_list_item(todo.id, item1.id, update_data)
+        updated2 = await repository.update_todo_list_item(todo.id, item2.id, update_data)
+
+        assert updated1.title == "Updated Item"
+        assert updated1.completed is True
+        assert updated2.title == "Updated Item"
+        assert updated2.completed is True
+
+        # Delete multiple
+        delete_result1 = await repository.delete_todo_list_item(todo.id, item1.id)
+        delete_result2 = await repository.delete_todo_list_item(todo.id, item2.id)
+        delete_result3 = await repository.delete_todo_list_item(todo.id, item3.id)
+
+        assert delete_result1 is True
+        assert delete_result2 is True
+        assert delete_result3 is True
