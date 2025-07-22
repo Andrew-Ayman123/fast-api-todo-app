@@ -7,3 +7,15 @@ repos:
         language: system
         types: [python]
         pass_filenames: true
+
+      - id: bandit
+        name: bandit (with config)
+        entry: bandit -r . --configfile bandit.yaml
+        language: system
+        types: [python]
+
+      - id: mypy
+        name: mypy (with config)
+        entry: mypy --config-file mypy.ini
+        language: system
+        types: [python]
