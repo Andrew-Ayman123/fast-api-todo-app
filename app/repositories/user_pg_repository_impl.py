@@ -3,6 +3,7 @@
 This module provides a PostgreSQL implementation of the UserRepositoryInterface
 using SQLAlchemy ORM for database operations.
 """
+
 import uuid
 
 from sqlalchemy.exc import IntegrityError
@@ -37,8 +38,12 @@ class UserPGRepository(UserRepositoryInterface):
         Returns:
             UserModel | None: The created user data.
 
+        Raises:
+            IntegrityError: If a user with the same email or username already exists.
+
         """
         get_logger().debug("Creating new user with email: %s", email)
+
         async with self.database.async_session() as session:
             # Instantiate UserModel using keyword arguments matching its fields
             new_user = UserModel(
@@ -86,4 +91,3 @@ class UserPGRepository(UserRepositoryInterface):
             query = select(UserModel).where(UserModel.email == email)
             result = await session.execute(query)
             return result.scalar_one_or_none()
-

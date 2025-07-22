@@ -14,9 +14,9 @@ class TestEnvUtils:
         with patch("os.getenv") as mock_getenv:
             mock_getenv.return_value = "test_value"
 
-            result = get_env("TEST_VAR")
+            result = get_env("TEST_VAR", "None")
 
-            mock_getenv.assert_called_once_with("TEST_VAR", None)
+            mock_getenv.assert_called_once_with("TEST_VAR", "None")
             assert result == "test_value"
 
     def test_get_env_with_default_value(self) -> None:
@@ -34,9 +34,9 @@ class TestEnvUtils:
         with patch("os.getenv") as mock_getenv:
             mock_getenv.return_value = None
 
-            result = get_env("NON_EXISTENT_VAR")
+            result = get_env("NON_EXISTENT_VAR", "None")
 
-            mock_getenv.assert_called_once_with("NON_EXISTENT_VAR", None)
+            mock_getenv.assert_called_once_with("NON_EXISTENT_VAR", "None")
             assert result is None
 
     def test_get_env_int_with_valid_integer(self) -> None:
@@ -44,16 +44,16 @@ class TestEnvUtils:
         with patch("os.getenv") as mock_getenv:
             mock_getenv.return_value = "42"
 
-            result = get_env_int("TEST_INT_VAR")
+            result = get_env_int("TEST_INT_VAR",10)
 
-            mock_getenv.assert_called_once_with("TEST_INT_VAR", None)
+            mock_getenv.assert_called_once_with("TEST_INT_VAR",10)
             assert result == 42
             assert isinstance(result, int)
 
     def test_get_env_int_with_default_value(self) -> None:
         """Test getting an environment variable as integer with default value."""
         with patch("os.getenv") as mock_getenv:
-            mock_getenv.return_value = 100
+            mock_getenv.return_value = "100"
 
             result = get_env_int("NON_EXISTENT_INT_VAR", 100)
 
@@ -61,15 +61,14 @@ class TestEnvUtils:
             assert result == 100
             assert isinstance(result, int)
 
-
     def test_get_env_bool_with_true_string(self) -> None:
         """Test getting an environment variable as boolean with 'true' value."""
         with patch("os.getenv") as mock_getenv:
             mock_getenv.return_value = "true"
 
-            result = get_env_bool("TEST_BOOL_VAR")
+            result = get_env_bool("TEST_BOOL_VAR", "None")
 
-            mock_getenv.assert_called_once_with("TEST_BOOL_VAR", None)
+            mock_getenv.assert_called_once_with("TEST_BOOL_VAR", "None")
             assert result is True
             assert isinstance(result, bool)
 
@@ -94,7 +93,7 @@ class TestEnvUtils:
             with patch("os.getenv") as mock_getenv:
                 mock_getenv.return_value = input_value
 
-                result = get_env_bool("TEST_VAR")
+                result = get_env_bool("TEST_VAR", "None")
 
                 assert result is expected_result, f"Failed for input '{input_value}'"
 
@@ -104,7 +103,7 @@ class TestEnvUtils:
             mock_getenv.return_value = "not_a_number"
 
             with pytest.raises(ValueError):
-                get_env_int("INVALID_INT_VAR")
+                get_env_int("INVALID_INT_VAR",-1)
 
     def test_get_env_int_with_float_string_should_raise_error(self) -> None:
         """Test that get_env_int raises ValueError for float strings."""
@@ -112,4 +111,4 @@ class TestEnvUtils:
             mock_getenv.return_value = "42.5"
 
             with pytest.raises(ValueError):
-                get_env_int("FLOAT_VAR")
+                get_env_int("FLOAT_VAR", -12)

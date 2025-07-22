@@ -13,9 +13,10 @@ repos:
         entry: bandit -r . --configfile bandit.yaml
         language: system
         types: [python]
+        pass_filenames: false
 
       - id: mypy
         name: mypy (with config)
-        entry: mypy --config-file mypy.ini
+        entry: mypy
         language: system
         types: [python]
