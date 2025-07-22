@@ -42,7 +42,7 @@ async def register_user(
         UserResponseWithToken: The user response with JWT token.
 
     Raises:
-     409 Conflict: If the user already exists.
+        409 Conflict: If the user already exists.
         400 Bad Request: If there is an error during user creation.
 
     """
@@ -92,7 +92,7 @@ async def login_user(
 @router.get("/profile", dependencies=[Depends(JWTBearer())])
 async def get_user_by_id(
     user_service: Annotated[UserService, Depends(get_user_service)],
-    request: Request = None,
+    request: Request,
 ) -> UserResponse:
     """Get user profile by ID from JWT token.
 
@@ -112,6 +112,7 @@ async def get_user_by_id(
     try:
         user_id = request.state.user_id
         user = await user_service.get_user_by_id(user_id)
+
         return _convert_user_to_response(user)
     except UserIDNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e

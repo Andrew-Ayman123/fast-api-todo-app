@@ -5,6 +5,7 @@ using SQLAlchemy ORM for database operations with user authorization.
 """
 
 import uuid
+from typing import TypeVar
 
 from sqlalchemy import Select, delete, func, update
 from sqlalchemy.exc import IntegrityError
@@ -23,6 +24,8 @@ from app.schemas.todo_schema import (
 )
 from app.utils.logger_util import get_logger
 
+T = TypeVar("T")
+
 
 class TodoPGRepository(TodoRepositoryInterface):
     """PostgreSQL implementation of Todo repository using SQLAlchemy ORM."""
@@ -36,7 +39,7 @@ class TodoPGRepository(TodoRepositoryInterface):
         """
         self.database = database
 
-    async def _fetch_one(self, session: AsyncSession, query: Select) -> object | None:
+    async def _fetch_one(self, session: AsyncSession, query: Select[tuple[T]]) -> T | None:
         """Fetch one record using SQLAlchemy.
 
         Args:
@@ -44,13 +47,13 @@ class TodoPGRepository(TodoRepositoryInterface):
             query (Select): The SQLAlchemy query to execute.
 
         Returns:
-            object | None: The fetched record if found, None otherwise.
+            T | None: The fetched record if found, None otherwise.
 
         """
         result = await session.execute(query)
         return result.scalar_one_or_none()
 
-    async def _fetch_all(self, session: AsyncSession, query: Select) -> list[object]:
+    async def _fetch_all(self, session: AsyncSession, query: Select[tuple[T]]) -> list[T]:
         """Fetch all records using SQLAlchemy.
 
         Args:
@@ -58,11 +61,11 @@ class TodoPGRepository(TodoRepositoryInterface):
             query (Select): The SQLAlchemy query to execute.
 
         Returns:
-            list[object]: List of all fetched records.
+            list[T]: List of all fetched records.
 
         """
         result = await session.execute(query)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def create_todo_list(self, todo_data: TodoListCreateRequest, user_id: uuid.UUID) -> TodoListModel:
         """Create a new todo list using SQLAlchemy.
@@ -165,7 +168,12 @@ class TodoPGRepository(TodoRepositoryInterface):
                     .options(selectinload(TodoListModel.todo_items))
                     .where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
                 )
-                return await self._fetch_one(session, query)
+                todo_list = await self._fetch_one(session, query)
+                if not todo_list:
+                    get_logger().warning("Todo list with ID: %s not found for user: %s for update", todo_id, user_id)
+                    return None
+                get_logger().info("Returning existing todo list ID: %s for user: %s", todo_id, user_id)
+                return todo_list
 
             get_logger().debug("Updating todo list ID: %s for user: %s with data: %s", todo_id, user_id, update_data)
             stmt = (
@@ -265,7 +273,6 @@ class TodoPGRepository(TodoRepositoryInterface):
                 return None
             else:
                 return new_item
-                return None
 
     async def get_todo_list_items(
         self, todo_id: uuid.UUID, user_id: uuid.UUID, skip: int = 0, limit: int = 100,
@@ -340,7 +347,16 @@ class TodoPGRepository(TodoRepositoryInterface):
                         TodoListModel.id == todo_id, TodoListModel.user_id == user_id, TodoListItemModel.id == item_id,
                     )
                 )
-                return await self._fetch_one(session, query)
+                todo_list_item = await self._fetch_one(session, query)
+                if not todo_list_item:
+                    get_logger().warning(
+                        "Todo item ID: %s not found in todo list ID: %s for user: %s for update",
+                        item_id,
+                        todo_id,
+                        user_id,
+                    )
+                    return None
+                return todo_list_item
 
             get_logger().debug(
                 "Updating todo item ID: %s in todo list ID: %s for user: %s with data: %s",

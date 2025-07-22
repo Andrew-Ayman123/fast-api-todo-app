@@ -1,3 +1,0 @@
-[bandit]
-exclude = tests,test,.venv,.git,.pytest_cache,.mypy_cache,.vscode,.idea,*.egg-info,*.eggs,*.pyc,*.pyo,*.pyd,__pycache__,.bandit
-skips = B101,B601

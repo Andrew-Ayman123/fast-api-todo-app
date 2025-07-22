@@ -50,7 +50,7 @@ class UserService:
         else:
             return user
 
-    async def get_user_by_id(self, user_id: uuid.UUID) -> UserModel | None:
+    async def get_user_by_id(self, user_id: uuid.UUID) -> UserModel:
         """Get user by UUID.
 
         Args:
@@ -65,14 +65,14 @@ class UserService:
             raise UserIDNotFoundError(user_id)
         return user
 
-    async def verify_user_exists(self, user_login_request: UserLoginRequest) -> None:
+    async def verify_user_exists(self, user_login_request: UserLoginRequest) -> UserModel:
         """Check if a user exists by email and password hash.
 
         Args:
             user_login_request (UserLoginRequest): The login request containing email and password.
 
         Returns:
-            bool: True if user exists, False otherwise.
+            UserModel: The user data if found.
 
         """
         # get user data by email
@@ -83,3 +83,5 @@ class UserService:
         # check if user exists with the provided password
         if not verify_password(user_login_request.password, user.password):
             raise WrongEmailOrPasswordError
+
+        return user

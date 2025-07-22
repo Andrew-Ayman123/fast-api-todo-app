@@ -12,14 +12,14 @@ class Settings(BaseSettings):
     """Application settings: database and API configuration."""
 
     # Database settings
-    database_url: str | None = get_env("DATABASE_URL")
+    database_url: str = get_env("DATABASE_URL","postgresql://user:pass@localhost:5432/todoapp")
     database_host: str = get_env("DATABASE_HOST", "localhost")
     database_port: int = get_env_int("DATABASE_PORT", 5432)
     database_name: str = get_env("DATABASE_NAME", "todoapp")
     database_user: str = get_env("DATABASE_USER", "user")
     database_password: str = get_env("DATABASE_PASSWORD", "password")
 
-    database_logging: bool = get_env_bool("DATABASE_LOGGING", default=False)
+    database_logging: bool = get_env_bool("DATABASE_LOGGING", "False")
 
     # API settings
     app_name: str = get_env("APP_NAME", "Todo API")

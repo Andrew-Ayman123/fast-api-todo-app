@@ -1,4 +1,3 @@
-
 """JWT middleware for FastAPI to handle Bearer token authentication."""
 from typing import TYPE_CHECKING
 
@@ -26,28 +25,28 @@ class JWTBearer(HTTPBearer):
         """
         super().__init__(auto_error=True)
 
-    async def __call__(self, request: Request) -> str:
+    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials |None:
         """Validate JWT Bearer token from request.
 
         Args:
             request (Request): FastAPI request object.
 
         Returns:
-            str: JWT token string if valid.
+            Optional[HTTPAuthorizationCredentials]: JWT credentials if valid.
 
         Raises:
             403 HTTPException: If authentication fails.
 
         """
-        credentials: HTTPAuthorizationCredentials = await super().__call__(request)
-        if credentials:
-            if credentials.scheme != "Bearer":
-                raise HTTPException(status_code=403, detail="Invalid authentication scheme.")
-            jwt_service: JWTService = get_jwt_service()
-            try:
-                payload = jwt_service.decode_token(credentials.credentials)
-                request.state.user_id = payload["user_id"]
-            except Exception as e:
-                raise HTTPException(status_code=403, detail="Invalid or expired token.") from e
-            return credentials.credentials
-        raise HTTPException(status_code=403, detail="Invalid authorization code.")
+        credentials: HTTPAuthorizationCredentials | None = await super().__call__(request)
+        if credentials is None or credentials.scheme != "Bearer":
+            raise HTTPException(status_code=403, detail="Invalid authentication scheme.")
+
+        jwt_service: JWTService = get_jwt_service()
+        try:
+            payload = jwt_service.decode_token(credentials.credentials)
+            request.state.user_id = payload["user_id"]
+        except Exception as e:
+            raise HTTPException(status_code=403, detail="Invalid or expired token.") from e
+
+        return credentials
