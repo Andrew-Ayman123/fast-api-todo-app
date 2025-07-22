@@ -23,6 +23,10 @@ dependencies = [
     "bcrypt>=3.2.2",
     "python-jose>=3.5.0",
     "passlib>=1.7.4",
+    "mypy>=1.17.0",
+    "bandit>=1.8.6",
+    "types-python-jose>=3.5.0.20250531",
+    "pre-commit>=4.2.0",
 ]
 
 [tool.pytest.ini_options]
@@ -44,3 +48,6 @@ line-length = 120
 
 [tool.setuptools]
 packages = ["app"]
+
+[tool.bandit.assert_used]
+skips = ['*_test.py', '*/test_*.py']
