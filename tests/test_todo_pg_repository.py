@@ -1,16 +1,13 @@
 """Integration tests for TodoPGRepository using real database connection."""
 
-from sqlalchemy import text
-import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 
 from app.config.database import DatabaseConnection
 from app.dependencies import get_database
-from app.models.todo_model import Base, TodoListItemModel, TodoListModel
 from app.repositories.todo_pg_repository_impl import TodoPGRepository
 from app.schemas.todo_schema import (
     TodoListCreateRequest,
@@ -23,12 +20,11 @@ from app.schemas.todo_schema import (
 class TestTodoPGRepository:
     """Integration tests for TodoPGRepository with real database connection."""
 
-
     @pytest_asyncio.fixture(autouse=True)
     async def cleanup_database(self, database: DatabaseConnection):
         """Clean up database after each test to ensure clean state."""
         yield  # This runs the test first
-        
+
         # Clean up after test
         session = await database.get_session().__anext__()
         try:
@@ -39,20 +35,19 @@ class TestTodoPGRepository:
         finally:
             await session.close()
 
-            
+
     @pytest_asyncio.fixture(scope="function")
     async def database(self) -> AsyncGenerator[DatabaseConnection, None]:
         """Create a test database connection.
-        
+
         Uses environment variables for test database configuration.
         Ensure you have a test database set up before running these tests.
         """
-
         # Create database connection with logging disabled for cleaner test output
         db = get_database()
-        
+
         yield db
-        
+
         await db.close()
 
     @pytest_asyncio.fixture
@@ -78,9 +73,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_create_todo_list_success(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test successful creation of a todo list."""
         # Act
@@ -97,9 +92,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_get_todo_list_by_id_existing(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test retrieving an existing todo list by ID."""
         # Arrange
@@ -135,9 +130,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_get_all_todo_lists_with_data(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test retrieving all todo lists with existing data."""
         # Arrange
@@ -156,9 +151,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_get_all_todo_lists_with_pagination(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test retrieving all todo lists with pagination."""
         # Arrange
@@ -180,16 +175,16 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_update_todo_list_success(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test successful update of a todo list."""
         # Arrange
         created_todo = await repository.create_todo_list(sample_todo_data)
         update_data = TodoListUpdateRequest(
-            title="Updated Title", 
-            description="Updated Description"
+            title="Updated Title",
+            description="Updated Description",
         )
 
         # Act
@@ -204,9 +199,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_update_todo_list_partial(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test partial update of a todo list."""
         # Arrange
@@ -236,9 +231,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_update_todo_list_no_changes(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test updating a todo list with no actual changes."""
         # Arrange
@@ -256,9 +251,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_delete_todo_list_success(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test successful deletion of a todo list."""
         # Arrange
@@ -269,7 +264,7 @@ class TestTodoPGRepository:
 
         # Assert
         assert result is True
-        
+
         # Verify it's actually deleted
         deleted_todo = await repository.get_todo_list_by_id(created_todo.id)
         assert deleted_todo is None
@@ -285,10 +280,10 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_add_todo_list_item_success(
-        self, 
-        repository: TodoPGRepository, 
+        self,
+        repository: TodoPGRepository,
         sample_todo_data: TodoListCreateRequest,
-        sample_todo_item_data: TodoListItemsAddRequest
+        sample_todo_item_data: TodoListItemsAddRequest,
     ) -> None:
         """Test successful addition of a todo item to a todo list."""
         # Arrange
@@ -308,9 +303,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_add_todo_list_item_to_non_existing_todo(
-        self, 
+        self,
         repository: TodoPGRepository,
-        sample_todo_item_data: TodoListItemsAddRequest
+        sample_todo_item_data: TodoListItemsAddRequest,
     ) -> None:
         """Test adding a todo item to a non-existing todo list."""
         # Act
@@ -321,9 +316,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_get_todo_list_items_empty(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test retrieving todo items from an empty todo list."""
         # Arrange
@@ -337,10 +332,10 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_get_todo_list_items_with_data(
-        self, 
-        repository: TodoPGRepository, 
+        self,
+        repository: TodoPGRepository,
         sample_todo_data: TodoListCreateRequest,
-        sample_todo_item_data: TodoListItemsAddRequest
+        sample_todo_item_data: TodoListItemsAddRequest,
     ) -> None:
         """Test retrieving todo items with existing data."""
         # Arrange
@@ -360,8 +355,8 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_get_todo_list_items_from_non_existing_todo(
-        self, 
-        repository: TodoPGRepository
+        self,
+        repository: TodoPGRepository,
     ) -> None:
         """Test retrieving todo items from a non-existing todo list."""
         # Act
@@ -372,9 +367,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_get_todo_list_items_with_pagination(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test retrieving todo items with pagination."""
         # Arrange
@@ -393,10 +388,10 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_update_todo_list_item_success(
-        self, 
-        repository: TodoPGRepository, 
+        self,
+        repository: TodoPGRepository,
         sample_todo_data: TodoListCreateRequest,
-        sample_todo_item_data: TodoListItemsAddRequest
+        sample_todo_item_data: TodoListItemsAddRequest,
     ) -> None:
         """Test successful update of a todo item."""
         # Arrange
@@ -405,7 +400,7 @@ class TestTodoPGRepository:
         update_data = TodoListItemUpdateRequest(
             title="Updated Item",
             description="Updated Description",
-            completed=True
+            completed=True,
         )
 
         # Act
@@ -420,10 +415,10 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_update_todo_list_item_partial(
-        self, 
-        repository: TodoPGRepository, 
+        self,
+        repository: TodoPGRepository,
         sample_todo_data: TodoListCreateRequest,
-        sample_todo_item_data: TodoListItemsAddRequest
+        sample_todo_item_data: TodoListItemsAddRequest,
     ) -> None:
         """Test partial update of a todo item."""
         # Arrange
@@ -443,9 +438,9 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_update_todo_list_item_non_existing(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test updating a non-existing todo item."""
         # Arrange
@@ -460,10 +455,10 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_update_todo_list_item_wrong_todo(
-        self, 
-        repository: TodoPGRepository, 
+        self,
+        repository: TodoPGRepository,
         sample_todo_data: TodoListCreateRequest,
-        sample_todo_item_data: TodoListItemsAddRequest
+        sample_todo_item_data: TodoListItemsAddRequest,
     ) -> None:
         """Test updating a todo item with wrong todo_id."""
         # Arrange
@@ -479,10 +474,10 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_delete_todo_list_item_success(
-        self, 
-        repository: TodoPGRepository, 
+        self,
+        repository: TodoPGRepository,
         sample_todo_data: TodoListCreateRequest,
-        sample_todo_item_data: TodoListItemsAddRequest
+        sample_todo_item_data: TodoListItemsAddRequest,
     ) -> None:
         """Test successful deletion of a todo item."""
         # Arrange
@@ -494,16 +489,16 @@ class TestTodoPGRepository:
 
         # Assert
         assert result is True
-        
+
         # Verify it's actually deleted
         items = await repository.get_todo_list_items(created_todo.id)
         assert len(items) == 0
 
     @pytest.mark.asyncio
     async def test_delete_todo_list_item_non_existing(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test deleting a non-existing todo item."""
         # Arrange
@@ -517,10 +512,10 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_delete_todo_list_item_wrong_todo(
-        self, 
-        repository: TodoPGRepository, 
+        self,
+        repository: TodoPGRepository,
         sample_todo_data: TodoListCreateRequest,
-        sample_todo_item_data: TodoListItemsAddRequest
+        sample_todo_item_data: TodoListItemsAddRequest,
     ) -> None:
         """Test deleting a todo item with wrong todo_id."""
         # Arrange
@@ -535,10 +530,10 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_cascade_delete_todo_items_when_todo_deleted(
-        self, 
-        repository: TodoPGRepository, 
+        self,
+        repository: TodoPGRepository,
         sample_todo_data: TodoListCreateRequest,
-        sample_todo_item_data: TodoListItemsAddRequest
+        sample_todo_item_data: TodoListItemsAddRequest,
     ) -> None:
         """Test that todo items are deleted when their parent todo is deleted."""
         # Arrange
@@ -548,8 +543,7 @@ class TestTodoPGRepository:
 
         # Verify items exist
         items_before = await repository.get_todo_list_items(created_todo.id)
-        print(f"Items before deletion: {items_before}")
-        
+
 
         # Act - Delete the todo list
         result = await repository.delete_todo_list(created_todo.id)
@@ -557,16 +551,16 @@ class TestTodoPGRepository:
         # Assert
         assert len(items_before) == 2
         assert result is True
-        
+
         # Verify items are also deleted (should return empty list for non-existent todo)
         items_after = await repository.get_todo_list_items(created_todo.id)
         assert len(items_after) == 0
 
     @pytest.mark.asyncio
     async def test_multiple_todo_list_operations_integration(
-        self, 
-        repository: TodoPGRepository, 
-        sample_todo_data: TodoListCreateRequest
+        self,
+        repository: TodoPGRepository,
+        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Integration test for creating, updating, and deleting multiple todo lists."""
         # Create multiple todo lists
@@ -600,10 +594,10 @@ class TestTodoPGRepository:
 
     @pytest.mark.asyncio
     async def test_multiple_todo_item_operations_integration(
-        self, 
-        repository: TodoPGRepository, 
+        self,
+        repository: TodoPGRepository,
         sample_todo_data: TodoListCreateRequest,
-        sample_todo_item_data: TodoListItemsAddRequest
+        sample_todo_item_data: TodoListItemsAddRequest,
     ) -> None:
         """Integration test for creating, updating, and deleting multiple todo items."""
         # Create parent todo

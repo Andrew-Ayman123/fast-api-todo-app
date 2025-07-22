@@ -3,21 +3,30 @@
 This module defines the UserService class, which provides methods for managing users.
 It interacts with the UserRepositoryInterface to perform CRUD operations on users.
 """
+import uuid
+
+from sqlalchemy.exc import IntegrityError
+
+from app.exceptions.user_exception import (
+    UserAlreadyExistsException,
+    UserIDNotFoundException,
+    WrongEmailOrPasswordException,
+)
 from app.models.user_model import UserModel
 from app.repositories.user_repository_interface import UserRepositoryInterface
-from app.schemas.user_schema import UserCreateRequest, UserLoginRequest, UserResponse
+from app.schemas.user_schema import UserCreateRequest, UserLoginRequest
 from app.utils.password_hash_util import hash_password, verify_password
-from app.exceptions.user_exception import UserAlreadyExistsException, UserIDNotFoundException, WrongEmailOrPasswordException
-from sqlalchemy.exc import IntegrityError
-import uuid
+
 
 class UserService:
     """Service class for managing users."""
+
     def __init__(self, user_repository: UserRepositoryInterface) -> None:
         """Initialize the UserService with a repository instance.
 
         Args:
             user_repository (UserRepositoryInterface): An instance of UserRepositoryInterface for database operations.
+
         """
         self.user_repository = user_repository
 
@@ -29,6 +38,7 @@ class UserService:
 
         Returns:
             UserResponse: The created user data.
+
         """
         password_hash = hash_password(user_data.password)
         try:
@@ -46,13 +56,14 @@ class UserService:
 
         Returns:
             UserResponse | None: The user data if found, else None.
+
         """
         user = await self.user_repository.get_user_by_id(user_id)
         if not user:
             raise UserIDNotFoundException(user_id)
         return user
 
-    async def verify_user_exists(self, user_login_request: UserLoginRequest):
+    async def verify_user_exists(self, user_login_request: UserLoginRequest) -> None:
         """Check if a user exists by email and password hash.
 
         Args:
@@ -61,12 +72,13 @@ class UserService:
 
         Returns:
             bool: True if user exists, False otherwise.
+
         """
         # get user data by email
         user = await self.user_repository.get_user_by_email(user_login_request.email)
         if not user:
-            raise WrongEmailOrPasswordException()
-        
+            raise WrongEmailOrPasswordException
+
         # check if user exists with the provided password
         if not verify_password(user_login_request.password, user.password_hash):
-            raise WrongEmailOrPasswordException()
+            raise WrongEmailOrPasswordException

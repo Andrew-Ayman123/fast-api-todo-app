@@ -4,8 +4,10 @@ This module defines the data models for todos, including todo lists and todo lis
 """
 
 # models/__init__.py
-from app.models.user_model import UserModel
-from app.models.todo_model import TodoListModel,TodoListItemModel
-from app.models.user_model import Base  # Shared declarative base
+from app.models.todo_model import TodoListItemModel, TodoListModel
+from app.models.user_model import (
+    Base,  # Shared declarative base
+    UserModel,
+)
 
-__all__ = ['UserModel', 'TodoListModel', 'TodoListItemModel', 'Base']
+__all__ = ["Base", "TodoListItemModel", "TodoListModel", "UserModel"]

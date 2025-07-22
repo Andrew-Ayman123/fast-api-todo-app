@@ -19,12 +19,10 @@ class TodoRepositoryInterface(ABC):
     @abstractmethod
     async def count_todo_lists(self) -> int:
         """Count the total number of todo lists in the database."""
-        pass
 
     @abstractmethod
     async def count_todo_list_items(self, todo_id: int) -> int:
         """Count the total number of items in a specific todo list."""
-        pass
     """Abstract base class defining the interface for Todo repository operations."""
 
     @abstractmethod

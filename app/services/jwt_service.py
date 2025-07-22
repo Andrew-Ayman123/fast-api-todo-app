@@ -1,12 +1,13 @@
-from datetime import datetime, time, timedelta
 import uuid
+from datetime import datetime, timedelta
+
 from jose import jwt
 
 
 class JWTService:
     """Service for handling JWT token generation and decoding."""
 
-    def __init__(self, secret_key: str, algorithm: str = "HS256", expiration_minutes: int = 60):
+    def __init__(self, secret_key: str, algorithm: str = "HS256", expiration_minutes: int = 60) -> None:
         self.secret_key = secret_key
         self.algorithm = algorithm
         self.expiration_minutes = expiration_minutes
@@ -18,20 +19,20 @@ class JWTService:
             "user_id": str(user_id),
             "exp": int(expiration.timestamp()),  # Use standard JWT 'exp' claim with timestamp
         }
-        
-        token = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
-        return token
-    
+
+        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
+
     def decode_token(self, token: str) -> dict:
         """Decode a JWT token and return the payload."""
         try:
             # The jose library automatically handles exp claim validation
-            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-            return payload
+            return jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
         except jwt.ExpiredSignatureError:
-            raise ValueError("Token has expired")
+            msg = "Token has expired"
+            raise ValueError(msg)
         except jwt.JWTError as e:
-            raise ValueError("Invalid token") from e
+            msg = "Invalid token"
+            raise ValueError(msg) from e
 
     def decode_token_user_id(self, token: str) -> uuid.UUID:
         """Decode a JWT token and return the user ID."""

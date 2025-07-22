@@ -22,8 +22,6 @@ from app.utils.logger_util import get_logger
 
 
 class TodoPGRepository(TodoRepositoryInterface):
-
-    
     """PostgreSQL implementation of Todo repository using SQLAlchemy ORM."""
 
     def __init__(self, database: DatabaseConnection) -> None:

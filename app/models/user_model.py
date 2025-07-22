@@ -7,9 +7,8 @@ import uuid
 
 from sqlalchemy import Column, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship,declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
-
 
 Base = declarative_base()
 

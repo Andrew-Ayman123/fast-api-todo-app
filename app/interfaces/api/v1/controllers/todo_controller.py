@@ -80,7 +80,7 @@ async def create_todo_list(
         raise HTTPException(status_code=500, detail=f"Failed to create todo list: {e!s}") from e
 
 
-@router.get("/", response_model=PaginatedTodoListResponse)
+@router.get("/")
 async def get_todo_lists(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     page: int = 1,
@@ -201,7 +201,7 @@ async def delete_todo_list(
         raise HTTPException(status_code=500, detail=f"Failed to delete todo: {e!s}") from e
 
 
-@router.get("/{todo_id}/items", response_model=PaginatedTodoListItemResponse)
+@router.get("/{todo_id}/items")
 async def get_todo_list_items(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     todo_id: int,

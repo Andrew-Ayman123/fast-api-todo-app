@@ -5,7 +5,7 @@ import uuid
 
 class WrongEmailOrPasswordException(Exception):
     """Exception raised when the email or password is incorrect."""
-    
+
     def __init__(self) -> None:
         """Initialize the exception with a default message."""
         super().__init__("Wrong email or password.")
@@ -13,7 +13,7 @@ class WrongEmailOrPasswordException(Exception):
 
 class UserAlreadyExistsException(Exception):
     """Exception raised when a user with the same email already exists."""
-    
+
     def __init__(self, email: str) -> None:
         """Initialize with the email that already exists."""
         self.email = email
