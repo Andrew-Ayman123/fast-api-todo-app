@@ -9,6 +9,8 @@ from app.models.user_model import UserModel
 
 
 class UserRepositoryInterface(ABC):
+    """Abstract base class for user repository operations."""
+
     @abstractmethod
     async def create_user(self, email: str, username: str, password_hash: str) -> UserModel:
         """Create a new user and return the user model."""

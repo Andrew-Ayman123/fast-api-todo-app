@@ -1,3 +1,4 @@
+"""Unit tests for environment utility functions."""
 from unittest.mock import patch
 
 import pytest

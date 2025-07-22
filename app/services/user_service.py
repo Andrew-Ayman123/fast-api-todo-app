@@ -8,9 +8,9 @@ import uuid
 from sqlalchemy.exc import IntegrityError
 
 from app.exceptions.user_exception import (
-    UserAlreadyExistsException,
-    UserIDNotFoundException,
-    WrongEmailOrPasswordException,
+    UserAlreadyExistsError,
+    UserIDNotFoundError,
+    WrongEmailOrPasswordError,
 )
 from app.models.user_model import UserModel
 from app.repositories.user_repository_interface import UserRepositoryInterface
@@ -44,7 +44,7 @@ class UserService:
         try:
             user = await self.user_repository.create_user(user_data.email, user_data.username, password_hash)
         except IntegrityError as e:
-            raise UserAlreadyExistsException(user_data.email) from e
+            raise UserAlreadyExistsError(user_data.email) from e
         else:
             return user
 
@@ -60,15 +60,14 @@ class UserService:
         """
         user = await self.user_repository.get_user_by_id(user_id)
         if not user:
-            raise UserIDNotFoundException(user_id)
+            raise UserIDNotFoundError(user_id)
         return user
 
     async def verify_user_exists(self, user_login_request: UserLoginRequest) -> None:
         """Check if a user exists by email and password hash.
 
         Args:
-            email (str): The user's email.
-            password_hash (str): The user's password hash.
+            user_login_request (UserLoginRequest): The login request containing email and password.
 
         Returns:
             bool: True if user exists, False otherwise.
@@ -77,8 +76,8 @@ class UserService:
         # get user data by email
         user = await self.user_repository.get_user_by_email(user_login_request.email)
         if not user:
-            raise WrongEmailOrPasswordException
+            raise WrongEmailOrPasswordError
 
         # check if user exists with the provided password
         if not verify_password(user_login_request.password, user.password_hash):
-            raise WrongEmailOrPasswordException
+            raise WrongEmailOrPasswordError

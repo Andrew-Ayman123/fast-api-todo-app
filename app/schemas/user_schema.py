@@ -30,7 +30,7 @@ class UserResponse(BaseModel):
 
     @field_validator("id", mode="before")
     @classmethod
-    def convert_uuid_to_string(cls, v):
+    def convert_uuid_to_string(cls, v: object) -> str:
         """Convert UUID to string if needed."""
         if isinstance(v, UUID):
             return str(v)

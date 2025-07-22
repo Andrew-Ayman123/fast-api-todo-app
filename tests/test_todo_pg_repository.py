@@ -21,7 +21,7 @@ class TestTodoPGRepository:
     """Integration tests for TodoPGRepository with real database connection."""
 
     @pytest_asyncio.fixture(autouse=True)
-    async def cleanup_database(self, database: DatabaseConnection):
+    async def cleanup_database(self, database: DatabaseConnection) -> AsyncGenerator[None, None]:
         """Clean up database after each test to ensure clean state."""
         yield  # This runs the test first
 
@@ -153,7 +153,6 @@ class TestTodoPGRepository:
     async def test_get_all_todo_lists_with_pagination(
         self,
         repository: TodoPGRepository,
-        sample_todo_data: TodoListCreateRequest,
     ) -> None:
         """Test retrieving all todo lists with pagination."""
         # Arrange

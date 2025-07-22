@@ -1,3 +1,4 @@
+"""JWT Service for handling JSON Web Tokens (JWT) in a FastAPI application."""
 import uuid
 from datetime import datetime, timedelta
 
@@ -8,13 +9,21 @@ class JWTService:
     """Service for handling JWT token generation and decoding."""
 
     def __init__(self, secret_key: str, algorithm: str = "HS256", expiration_minutes: int = 60) -> None:
+        """Initialize the JWTService with secret key and algorithm.
+
+        Args:
+            secret_key (str): The secret key used for signing the JWT.
+            algorithm (str): The algorithm used for signing the JWT. Default is 'HS256'.
+            expiration_minutes (int): The expiration time for the JWT in minutes. Default is 60
+
+        """
         self.secret_key = secret_key
         self.algorithm = algorithm
         self.expiration_minutes = expiration_minutes
 
     def generate_token(self, user_id: uuid.UUID) -> str:
         """Generate a JWT token for user authentication."""
-        expiration = datetime.now() + timedelta(minutes=self.expiration_minutes)
+        expiration = datetime.now(tz=datetime.timezone.utc) + timedelta(minutes=self.expiration_minutes)
         payload = {
             "user_id": str(user_id),
             "exp": int(expiration.timestamp()),  # Use standard JWT 'exp' claim with timestamp
@@ -29,7 +38,7 @@ class JWTService:
             return jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
         except jwt.ExpiredSignatureError:
             msg = "Token has expired"
-            raise ValueError(msg)
+            raise ValueError(msg) from None
         except jwt.JWTError as e:
             msg = "Invalid token"
             raise ValueError(msg) from e

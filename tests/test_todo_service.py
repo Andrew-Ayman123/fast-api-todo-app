@@ -22,28 +22,28 @@ class TestTodoService:
     """Test suite for TodoService class."""
 
     @pytest.fixture
-    def mock_todo_repository(self):
+    def mock_todo_repository(self) -> AsyncMock:
         """Create a mock todo repository for testing."""
         return AsyncMock(spec=TodoRepositoryInterface)
 
     @pytest.fixture
-    def todo_service(self, mock_todo_repository):
+    def todo_service(self, mock_todo_repository: AsyncMock) -> TodoService:
         """Create a TodoService instance with mocked repository."""
         return TodoService(todo_repository=mock_todo_repository)
 
     @pytest.fixture
-    def sample_todo_list_model(self):
+    def sample_todo_list_model(self) -> TodoListModel:
         """Create a sample TodoListModel for testing."""
         return TodoListModel(
             id=1,
             title="Test Todo List",
             description="Test description",
-            created_at=datetime(2025, 1, 1, 12, 0, 0),
-            updated_at=datetime(2025, 1, 1, 12, 0, 0),
+            created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
         )
 
     @pytest.fixture
-    def sample_todo_item_model(self):
+    def sample_todo_item_model(self) -> TodoListItemModel:
         """Create a sample TodoListItemModel for testing."""
         return TodoListItemModel(
             id=1,
@@ -51,12 +51,12 @@ class TestTodoService:
             title="Test Todo Item",
             description="Test item description",
             completed=False,
-            created_at=datetime(2025, 1, 1, 12, 0, 0),
-            updated_at=datetime(2025, 1, 1, 12, 0, 0),
+            created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
         )
 
     @pytest.fixture
-    def sample_todo_create_request(self):
+    def sample_todo_create_request(self) -> TodoListCreateRequest:
         """Create a sample TodoListCreateRequest for testing."""
         return TodoListCreateRequest(
             title="New Todo List",
@@ -64,7 +64,7 @@ class TestTodoService:
         )
 
     @pytest.fixture
-    def sample_todo_update_request(self):
+    def sample_todo_update_request(self) -> TodoListUpdateRequest:
         """Create a sample TodoListUpdateRequest for testing."""
         return TodoListUpdateRequest(
             title="Updated Todo List",
@@ -72,7 +72,7 @@ class TestTodoService:
         )
 
     @pytest.fixture
-    def sample_item_add_request(self):
+    def sample_item_add_request(self) -> TodoListItemsAddRequest:
         """Create a sample TodoListItemsAddRequest for testing."""
         return TodoListItemsAddRequest(
             title="New Todo Item",
@@ -80,7 +80,7 @@ class TestTodoService:
         )
 
     @pytest.fixture
-    def sample_item_update_request(self):
+    def sample_item_update_request(self) -> TodoListItemUpdateRequest:
         """Create a sample TodoListItemUpdateRequest for testing."""
         return TodoListItemUpdateRequest(
             title="Updated Todo Item",
@@ -89,7 +89,13 @@ class TestTodoService:
         )
 
     # Tests for create_todo_list
-    async def test_create_todo_list_success(self, todo_service, mock_todo_repository, sample_todo_create_request, sample_todo_list_model) -> None:
+    async def test_create_todo_list_success(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_todo_create_request: TodoListCreateRequest,
+        sample_todo_list_model: TodoListModel,
+    ) -> None:
         """Test successful creation of a todo list."""
         mock_todo_repository.create_todo_list.return_value = sample_todo_list_model
 
@@ -99,7 +105,9 @@ class TestTodoService:
         assert result == sample_todo_list_model
 
     # Tests for get_todo_list_by_id
-    async def test_get_todo_list_by_id_success(self, todo_service, mock_todo_repository, sample_todo_list_model) -> None:
+    async def test_get_todo_list_by_id_success(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock, sample_todo_list_model: TodoListModel,
+    ) -> None:
         """Test successful retrieval of a todo list by ID."""
         mock_todo_repository.get_todo_list_by_id.return_value = sample_todo_list_model
 
@@ -108,7 +116,9 @@ class TestTodoService:
         mock_todo_repository.get_todo_list_by_id.assert_called_once_with(1)
         assert result == sample_todo_list_model
 
-    async def test_get_todo_list_by_id_not_found(self, todo_service, mock_todo_repository) -> None:
+    async def test_get_todo_list_by_id_not_found(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock,
+    ) -> None:
         """Test TodoListNotFoundError when todo list is not found."""
         mock_todo_repository.get_todo_list_by_id.return_value = None
 
@@ -119,7 +129,9 @@ class TestTodoService:
         assert exc_info.value.todo_id == 999
 
     # Tests for get_all_todo_lists_without_items
-    async def test_get_all_todo_lists_without_items_default_params(self, todo_service, mock_todo_repository, sample_todo_list_model) -> None:
+    async def test_get_all_todo_lists_without_items_default_params(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock, sample_todo_list_model: TodoListModel,
+    ) -> None:
         """Test retrieval of all todo lists with default pagination parameters."""
         expected_todos = [sample_todo_list_model]
         mock_todo_repository.get_all_todo_lists.return_value = expected_todos
@@ -129,7 +141,9 @@ class TestTodoService:
         mock_todo_repository.get_all_todo_lists.assert_called_once_with(0, 100)
         assert result == expected_todos
 
-    async def test_get_all_todo_lists_without_items_custom_params(self, todo_service, mock_todo_repository, sample_todo_list_model) -> None:
+    async def test_get_all_todo_lists_without_items_custom_params(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock, sample_todo_list_model: TodoListModel,
+    ) -> None:
         """Test retrieval of all todo lists with custom pagination parameters."""
         expected_todos = [sample_todo_list_model]
         mock_todo_repository.get_all_todo_lists.return_value = expected_todos
@@ -139,7 +153,9 @@ class TestTodoService:
         mock_todo_repository.get_all_todo_lists.assert_called_once_with(10, 50)
         assert result == expected_todos
 
-    async def test_get_all_todo_lists_without_items_empty_result(self, todo_service, mock_todo_repository) -> None:
+    async def test_get_all_todo_lists_without_items_empty_result(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock,
+    ) -> None:
         """Test retrieval of all todo lists when no todos exist."""
         mock_todo_repository.get_all_todo_lists.return_value = []
 
@@ -149,7 +165,13 @@ class TestTodoService:
         assert result == []
 
     # Tests for update_todo_list
-    async def test_update_todo_list_success(self, todo_service, mock_todo_repository, sample_todo_update_request, sample_todo_list_model) -> None:
+    async def test_update_todo_list_success(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_todo_update_request: TodoListUpdateRequest,
+        sample_todo_list_model: TodoListModel,
+    ) -> None:
         """Test successful update of a todo list."""
         mock_todo_repository.update_todo_list.return_value = sample_todo_list_model
 
@@ -158,7 +180,12 @@ class TestTodoService:
         mock_todo_repository.update_todo_list.assert_called_once_with(1, sample_todo_update_request)
         assert result == sample_todo_list_model
 
-    async def test_update_todo_list_not_found(self, todo_service, mock_todo_repository, sample_todo_update_request) -> None:
+    async def test_update_todo_list_not_found(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_todo_update_request: TodoListUpdateRequest,
+    ) -> None:
         """Test TodoListNotFoundError when updating non-existent todo list."""
         mock_todo_repository.update_todo_list.return_value = None
 
@@ -169,7 +196,7 @@ class TestTodoService:
         assert exc_info.value.todo_id == 999
 
     # Tests for delete_todo_list
-    async def test_delete_todo_list_success(self, todo_service, mock_todo_repository) -> None:
+    async def test_delete_todo_list_success(self, todo_service: TodoService, mock_todo_repository: AsyncMock) -> None:
         """Test successful deletion of a todo list."""
         mock_todo_repository.delete_todo_list.return_value = True
 
@@ -178,7 +205,7 @@ class TestTodoService:
         mock_todo_repository.delete_todo_list.assert_called_once_with(1)
         assert result is None
 
-    async def test_delete_todo_list_not_found(self, todo_service, mock_todo_repository) -> None:
+    async def test_delete_todo_list_not_found(self, todo_service: TodoService, mock_todo_repository: AsyncMock) -> None:
         """Test TodoListNotFoundError when deleting non-existent todo list."""
         mock_todo_repository.delete_todo_list.return_value = False
 
@@ -189,7 +216,13 @@ class TestTodoService:
         assert exc_info.value.todo_id == 999
 
     # Tests for add_todo_list_item
-    async def test_add_todo_list_item_success(self, todo_service, mock_todo_repository, sample_item_add_request, sample_todo_item_model) -> None:
+    async def test_add_todo_list_item_success(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_item_add_request: TodoListItemsAddRequest,
+        sample_todo_item_model: TodoListItemModel,
+    ) -> None:
         """Test successful addition of an item to a todo list."""
         mock_todo_repository.add_todo_list_item.return_value = sample_todo_item_model
 
@@ -198,7 +231,12 @@ class TestTodoService:
         mock_todo_repository.add_todo_list_item.assert_called_once_with(1, sample_item_add_request)
         assert result == sample_todo_item_model
 
-    async def test_add_todo_list_item_todo_not_found(self, todo_service, mock_todo_repository, sample_item_add_request) -> None:
+    async def test_add_todo_list_item_todo_not_found(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_item_add_request: TodoListItemsAddRequest,
+    ) -> None:
         """Test TodoListNotFoundError when adding item to non-existent todo list."""
         mock_todo_repository.add_todo_list_item.return_value = None
 
@@ -209,7 +247,9 @@ class TestTodoService:
         assert exc_info.value.todo_id == 999
 
     # Tests for get_todo_list_items
-    async def test_get_todo_list_items_default_params(self, todo_service, mock_todo_repository, sample_todo_item_model) -> None:
+    async def test_get_todo_list_items_default_params(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock, sample_todo_item_model: TodoListItemModel,
+    ) -> None:
         """Test retrieval of todo list items with default pagination parameters."""
         expected_items = [sample_todo_item_model]
         mock_todo_repository.get_todo_list_items.return_value = expected_items
@@ -219,7 +259,9 @@ class TestTodoService:
         mock_todo_repository.get_todo_list_items.assert_called_once_with(1, 0, 100)
         assert result == expected_items
 
-    async def test_get_todo_list_items_custom_params(self, todo_service, mock_todo_repository, sample_todo_item_model) -> None:
+    async def test_get_todo_list_items_custom_params(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock, sample_todo_item_model: TodoListItemModel,
+    ) -> None:
         """Test retrieval of todo list items with custom pagination parameters."""
         expected_items = [sample_todo_item_model]
         mock_todo_repository.get_todo_list_items.return_value = expected_items
@@ -229,7 +271,9 @@ class TestTodoService:
         mock_todo_repository.get_todo_list_items.assert_called_once_with(1, 5, 25)
         assert result == expected_items
 
-    async def test_get_todo_list_items_empty_result(self, todo_service, mock_todo_repository) -> None:
+    async def test_get_todo_list_items_empty_result(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock,
+    ) -> None:
         """Test retrieval of todo list items when no items exist."""
         mock_todo_repository.get_todo_list_items.return_value = []
 
@@ -239,7 +283,13 @@ class TestTodoService:
         assert result == []
 
     # Tests for update_todo_item
-    async def test_update_todo_item_success(self, todo_service, mock_todo_repository, sample_item_update_request, sample_todo_item_model) -> None:
+    async def test_update_todo_item_success(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_item_update_request: TodoListItemUpdateRequest,
+        sample_todo_item_model: TodoListItemModel,
+    ) -> None:
         """Test successful update of a todo list item."""
         mock_todo_repository.update_todo_list_item.return_value = sample_todo_item_model
 
@@ -248,7 +298,12 @@ class TestTodoService:
         mock_todo_repository.update_todo_list_item.assert_called_once_with(1, 1, sample_item_update_request)
         assert result == sample_todo_item_model
 
-    async def test_update_todo_item_not_found(self, todo_service, mock_todo_repository, sample_item_update_request) -> None:
+    async def test_update_todo_item_not_found(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_item_update_request: TodoListItemUpdateRequest,
+    ) -> None:
         """Test TodoListItemNotFoundError when updating non-existent todo item."""
         mock_todo_repository.update_todo_list_item.return_value = None
 
@@ -260,7 +315,9 @@ class TestTodoService:
         assert exc_info.value.item_id == 999
 
     # Tests for delete_todo_list_item
-    async def test_delete_todo_list_item_success(self, todo_service, mock_todo_repository) -> None:
+    async def test_delete_todo_list_item_success(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock,
+    ) -> None:
         """Test successful deletion of a todo list item."""
         mock_todo_repository.delete_todo_list_item.return_value = True
 
@@ -269,7 +326,9 @@ class TestTodoService:
         mock_todo_repository.delete_todo_list_item.assert_called_once_with(1, 1)
         assert result is None
 
-    async def test_delete_todo_list_item_not_found(self, todo_service, mock_todo_repository) -> None:
+    async def test_delete_todo_list_item_not_found(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock,
+    ) -> None:
         """Test TodoListItemNotFoundError when deleting non-existent todo item."""
         mock_todo_repository.delete_todo_list_item.return_value = False
 
@@ -281,15 +340,27 @@ class TestTodoService:
         assert exc_info.value.item_id == 999
 
     # Edge case tests
-    async def test_service_initialization(self, mock_todo_repository) -> None:
+    async def test_service_initialization(self, mock_todo_repository: AsyncMock) -> None:
         """Test proper initialization of TodoService."""
         service = TodoService(todo_repository=mock_todo_repository)
         assert service.todo_repository == mock_todo_repository
 
-    async def test_multiple_todo_lists(self, todo_service, mock_todo_repository) -> None:
+    async def test_multiple_todo_lists(self, todo_service: TodoService, mock_todo_repository: AsyncMock) -> None:
         """Test handling multiple todo lists."""
-        todo1 = TodoListModel(id=1, title="Todo 1", description="Description 1", created_at=datetime.now(), updated_at=datetime.now())
-        todo2 = TodoListModel(id=2, title="Todo 2", description="Description 2", created_at=datetime.now(), updated_at=datetime.now())
+        todo1 = TodoListModel(
+            id=1,
+            title="Todo 1",
+            description="Description 1",
+            created_at=datetime.now(tz=UTC),
+            updated_at=datetime.now(tz=UTC),
+        )
+        todo2 = TodoListModel(
+            id=2,
+            title="Todo 2",
+            description="Description 2",
+            created_at=datetime.now(tz=UTC),
+            updated_at=datetime.now(tz=UTC),
+        )
         expected_todos = [todo1, todo2]
 
         mock_todo_repository.get_all_todo_lists.return_value = expected_todos
@@ -299,10 +370,26 @@ class TestTodoService:
         assert len(result) == 2
         assert result == expected_todos
 
-    async def test_multiple_todo_items(self, todo_service, mock_todo_repository) -> None:
+    async def test_multiple_todo_items(self, todo_service: TodoService, mock_todo_repository: AsyncMock) -> None:
         """Test handling multiple todo items."""
-        item1 = TodoListItemModel(id=1, todo_id=1, title="Item 1", description="Description 1", completed=False, created_at=datetime.now(), updated_at=datetime.now())
-        item2 = TodoListItemModel(id=2, todo_id=1, title="Item 2", description="Description 2", completed=True, created_at=datetime.now(), updated_at=datetime.now())
+        item1 = TodoListItemModel(
+            id=1,
+            todo_id=1,
+            title="Item 1",
+            description="Description 1",
+            completed=False,
+            created_at=datetime.now(tz=UTC),
+            updated_at=datetime.now(tz=UTC),
+        )
+        item2 = TodoListItemModel(
+            id=2,
+            todo_id=1,
+            title="Item 2",
+            description="Description 2",
+            completed=True,
+            created_at=datetime.now(tz=UTC),
+            updated_at=datetime.now(tz=UTC),
+        )
         expected_items = [item1, item2]
 
         mock_todo_repository.get_todo_list_items.return_value = expected_items
@@ -313,10 +400,27 @@ class TestTodoService:
         assert result == expected_items
 
     # Tests for batch operations - Todo Lists
-    async def test_create_many_todo_lists_success(self, todo_service, mock_todo_repository, sample_todo_create_request) -> None:
+    async def test_create_many_todo_lists_success(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_todo_create_request: TodoListCreateRequest,
+    ) -> None:
         """Test successful creation of multiple todo lists."""
-        todo1 = TodoListModel(id=1, title="Todo 1", description="Description 1", created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC))
-        todo2 = TodoListModel(id=2, title="Todo 2", description="Description 2", created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC))
+        todo1 = TodoListModel(
+            id=1,
+            title="Todo 1",
+            description="Description 1",
+            created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+        )
+        todo2 = TodoListModel(
+            id=2,
+            title="Todo 2",
+            description="Description 2",
+            created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+        )
 
         mock_todo_repository.create_todo_list.side_effect = [todo1, todo2]
 
@@ -327,10 +431,27 @@ class TestTodoService:
         assert result == [todo1, todo2]
         assert mock_todo_repository.create_todo_list.call_count == 2
 
-    async def test_update_many_todo_lists_success(self, todo_service, mock_todo_repository, sample_todo_update_request) -> None:
+    async def test_update_many_todo_lists_success(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_todo_update_request: TodoListUpdateRequest,
+    ) -> None:
         """Test successful update of multiple todo lists."""
-        todo1 = TodoListModel(id=1, title="Updated Todo 1", description="Updated Description 1", created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC))
-        todo2 = TodoListModel(id=2, title="Updated Todo 2", description="Updated Description 2", created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC))
+        todo1 = TodoListModel(
+            id=1,
+            title="Updated Todo 1",
+            description="Updated Description 1",
+            created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+        )
+        todo2 = TodoListModel(
+            id=2,
+            title="Updated Todo 2",
+            description="Updated Description 2",
+            created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+        )
 
         mock_todo_repository.update_todo_list.side_effect = [todo1, todo2]
 
@@ -349,7 +470,12 @@ class TestTodoService:
         assert result == [todo1, todo2]
         assert mock_todo_repository.update_todo_list.call_count == 2
 
-    async def test_update_many_todo_lists_not_found(self, todo_service, mock_todo_repository, sample_todo_update_request) -> None:
+    async def test_update_many_todo_lists_not_found(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_todo_update_request: TodoListUpdateRequest,
+    ) -> None:
         """Test TodoListNotFoundError when updating non-existent todo list."""
         mock_todo_repository.update_todo_list.return_value = None
 
@@ -362,7 +488,9 @@ class TestTodoService:
 
         assert exc_info.value.todo_id == 999
 
-    async def test_delete_many_todo_lists_success(self, todo_service, mock_todo_repository) -> None:
+    async def test_delete_many_todo_lists_success(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock,
+    ) -> None:
         """Test successful deletion of multiple todo lists."""
         mock_todo_repository.delete_todo_list.return_value = True
 
@@ -371,7 +499,9 @@ class TestTodoService:
 
         assert mock_todo_repository.delete_todo_list.call_count == 3
 
-    async def test_delete_many_todo_lists_not_found(self, todo_service, mock_todo_repository) -> None:
+    async def test_delete_many_todo_lists_not_found(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock,
+    ) -> None:
         """Test TodoListNotFoundError when deleting non-existent todo list."""
         mock_todo_repository.delete_todo_list.return_value = False
 
@@ -381,10 +511,31 @@ class TestTodoService:
         assert exc_info.value.todo_id == 999
 
     # Tests for batch operations - Todo List Items
-    async def test_create_many_todo_list_items_success(self, todo_service, mock_todo_repository, sample_item_add_request) -> None:
+    async def test_create_many_todo_list_items_success(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_item_add_request: TodoListItemsAddRequest,
+    ) -> None:
         """Test successful creation of multiple todo list items."""
-        item1 = TodoListItemModel(id=1, todo_id=1, title="Item 1", description="Description 1", completed=False, created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC))
-        item2 = TodoListItemModel(id=2, todo_id=1, title="Item 2", description="Description 2", completed=False, created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC))
+        item1 = TodoListItemModel(
+            id=1,
+            todo_id=1,
+            title="Item 1",
+            description="Description 1",
+            completed=False,
+            created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+        )
+        item2 = TodoListItemModel(
+            id=2,
+            todo_id=1,
+            title="Item 2",
+            description="Description 2",
+            completed=False,
+            created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+        )
 
         mock_todo_repository.add_todo_list_item.side_effect = [item1, item2]
 
@@ -395,7 +546,12 @@ class TestTodoService:
         assert result == [item1, item2]
         assert mock_todo_repository.add_todo_list_item.call_count == 2
 
-    async def test_create_many_todo_list_items_todo_not_found(self, todo_service, mock_todo_repository, sample_item_add_request) -> None:
+    async def test_create_many_todo_list_items_todo_not_found(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_item_add_request: TodoListItemsAddRequest,
+    ) -> None:
         """Test TodoListNotFoundError when adding items to non-existent todo list."""
         mock_todo_repository.add_todo_list_item.return_value = None
 
@@ -404,10 +560,31 @@ class TestTodoService:
 
         assert exc_info.value.todo_id == 999
 
-    async def test_update_many_todo_list_items_success(self, todo_service, mock_todo_repository, sample_item_update_request) -> None:
+    async def test_update_many_todo_list_items_success(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_item_update_request: TodoListItemUpdateRequest,
+    ) -> None:
         """Test successful update of multiple todo list items."""
-        item1 = TodoListItemModel(id=1, todo_id=1, title="Updated Item 1", description="Updated Description 1", completed=True, created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC))
-        item2 = TodoListItemModel(id=2, todo_id=1, title="Updated Item 2", description="Updated Description 2", completed=True, created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC), updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC))
+        item1 = TodoListItemModel(
+            id=1,
+            todo_id=1,
+            title="Updated Item 1",
+            description="Updated Description 1",
+            completed=True,
+            created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+        )
+        item2 = TodoListItemModel(
+            id=2,
+            todo_id=1,
+            title="Updated Item 2",
+            description="Updated Description 2",
+            completed=True,
+            created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
+        )
 
         mock_todo_repository.update_todo_list_item.side_effect = [item1, item2]
 
@@ -426,7 +603,12 @@ class TestTodoService:
         assert result == [item1, item2]
         assert mock_todo_repository.update_todo_list_item.call_count == 2
 
-    async def test_update_many_todo_list_items_not_found(self, todo_service, mock_todo_repository, sample_item_update_request) -> None:
+    async def test_update_many_todo_list_items_not_found(
+        self,
+        todo_service: TodoService,
+        mock_todo_repository: AsyncMock,
+        sample_item_update_request: TodoListItemUpdateRequest,
+    ) -> None:
         """Test TodoListItemNotFoundError when updating non-existent todo list item."""
         mock_todo_repository.update_todo_list_item.return_value = None
 
@@ -440,7 +622,9 @@ class TestTodoService:
         assert exc_info.value.todo_id == 1
         assert exc_info.value.item_id == 999
 
-    async def test_delete_many_todo_list_items_success(self, todo_service, mock_todo_repository) -> None:
+    async def test_delete_many_todo_list_items_success(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock,
+    ) -> None:
         """Test successful deletion of multiple todo list items."""
         mock_todo_repository.delete_todo_list_item.return_value = True
 
@@ -449,7 +633,9 @@ class TestTodoService:
 
         assert mock_todo_repository.delete_todo_list_item.call_count == 3
 
-    async def test_delete_many_todo_list_items_not_found(self, todo_service, mock_todo_repository) -> None:
+    async def test_delete_many_todo_list_items_not_found(
+        self, todo_service: TodoService, mock_todo_repository: AsyncMock,
+    ) -> None:
         """Test TodoListItemNotFoundError when deleting non-existent todo list item."""
         mock_todo_repository.delete_todo_list_item.return_value = False
 

@@ -1,9 +1,13 @@
+"""Exceptions for user-related operations.
 
+This module defines custom exceptions for user operations such as creation, retrieval, and authentication.
+These exceptions can be raised by the UserService or UserRepository to handle specific error cases.
+"""
 
 import uuid
 
 
-class WrongEmailOrPasswordException(Exception):
+class WrongEmailOrPasswordError(Exception):
     """Exception raised when the email or password is incorrect."""
 
     def __init__(self) -> None:
@@ -11,7 +15,7 @@ class WrongEmailOrPasswordException(Exception):
         super().__init__("Wrong email or password.")
 
 
-class UserAlreadyExistsException(Exception):
+class UserAlreadyExistsError(Exception):
     """Exception raised when a user with the same email already exists."""
 
     def __init__(self, email: str) -> None:
@@ -19,7 +23,7 @@ class UserAlreadyExistsException(Exception):
         self.email = email
         super().__init__(f"User with email {self.email} already exists.")
 
-class UserIDNotFoundException(Exception):
+class UserIDNotFoundError(Exception):
     """Exception raised when a user is not found."""
 
     def __init__(self, user_id: uuid.UUID) -> None:

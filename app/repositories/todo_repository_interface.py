@@ -15,6 +15,7 @@ from app.schemas.todo_schema import (
 
 
 class TodoRepositoryInterface(ABC):
+    """Abstract base class defining the interface for Todo repository operations."""
 
     @abstractmethod
     async def count_todo_lists(self) -> int:
