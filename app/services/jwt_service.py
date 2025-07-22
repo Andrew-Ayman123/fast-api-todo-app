@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from jose import jwt
+from jose.exceptions import ExpiredSignatureError, JWTError
 
 
 class JWTService:
@@ -45,10 +46,10 @@ class JWTService:
         try:
             # The jose library automatically handles exp claim validation
             return jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-        except jwt.ExpiredSignatureError:
+        except ExpiredSignatureError as e:
             msg = "Token has expired"
-            raise ValueError(msg) from None
-        except jwt.JWTError as e:
+            raise ValueError(msg) from e
+        except JWTError as e:
             msg = "Invalid token"
             raise ValueError(msg) from e
 

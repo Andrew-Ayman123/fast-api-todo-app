@@ -23,11 +23,15 @@ class BaseEntitySchema(BaseModel):
 
     @field_validator("id", mode="before")
     @classmethod
-    def convert_uuid_to_string(cls, v: object) -> str:
+    def convert_uuid_to_string(cls, v: str | UUID) -> str:
         """Convert UUID to string if needed."""
         if isinstance(v, UUID):
             return str(v)
-        return v
+        if isinstance(v, str):
+            return v
+        msg = f"Invalid type for id: {type(v)}. Expected UUID or str."
+        raise TypeError(msg)
+
 
     class Config:
         """Pydantic model configuration."""
@@ -156,12 +160,14 @@ class TodoListUpdateItem(BaseModel):
 
     @field_validator("id", mode="before")
     @classmethod
-    def convert_uuid_to_string(cls, v: object) -> str:
+    def convert_uuid_to_string(cls, v: str | UUID) -> str:
         """Convert UUID to string if needed."""
         if isinstance(v, UUID):
             return str(v)
-        return v
-
+        if isinstance(v, str):
+            return v
+        msg = f"Invalid type for id: {type(v)}. Expected UUID or str."
+        raise TypeError(msg)
 
 class TodoListUpdateManyRequest(BaseModel):
     """Schema for updating multiple todo lists.
@@ -186,11 +192,9 @@ class TodoListDeleteManyRequest(BaseModel):
 
     @field_validator("todo_ids", mode="before", check_fields=False)
     @classmethod
-    def convert_uuid_to_string(cls, v: object) -> list[str]:
+    def convert_uuid_to_string(cls, v: list[UUID | str]) -> list[str]:
         """Convert UUIDs to strings if needed."""
-        if isinstance(v, list):
-            return [str(item) for item in v]
-        return v
+        return [str(item) for item in v]
 
 
 class TodoListItemCreateManyRequest(BaseModel):
@@ -218,11 +222,14 @@ class TodoListItemUpdateItem(BaseModel):
 
     @field_validator("id", mode="before")
     @classmethod
-    def convert_uuid_to_string(cls, v: object) -> str:
+    def convert_uuid_to_string(cls, v: str | UUID) -> str:
         """Convert UUID to string if needed."""
         if isinstance(v, UUID):
             return str(v)
-        return v
+        if isinstance(v, str):
+            return v
+        msg = f"Invalid type for id: {type(v)}. Expected UUID or str."
+        raise TypeError(msg)
 
 
 class TodoListItemUpdateManyRequest(BaseModel):
@@ -246,13 +253,11 @@ class TodoListItemDeleteManyRequest(BaseModel):
 
     item_ids: list[str]
 
-    @field_validator("todo_ids", mode="before", check_fields=False)
+    @field_validator("item_ids", mode="before", check_fields=False)
     @classmethod
-    def convert_uuid_to_string(cls, v: object) -> list[str]:
+    def convert_uuid_to_string(cls, v: list[UUID | str]) -> list[str]:
         """Convert UUIDs to strings if needed."""
-        if isinstance(v, list):
-            return [str(item) for item in v]
-        return v
+        return [str(item) for item in v]
 
 
 class SuccessResponse(BaseModel):

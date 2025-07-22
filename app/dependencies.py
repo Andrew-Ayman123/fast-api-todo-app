@@ -49,14 +49,13 @@ def get_database() -> DatabaseConnection:
             database_host=settings.database_host,
             database_port=settings.database_port,
             database_name=settings.database_name,
-            ssl_mode=settings.database_ssl_mode,
         )
 
     return DatabaseConnection(connection_string, enable_echo=settings.database_logging)
 
 
 @lru_cache
-def get_todo_repository(database: DatabaseConnection = None) -> TodoRepositoryInterface:
+def get_todo_repository(database: DatabaseConnection | None = None) -> TodoRepositoryInterface:
     """Get the Todo repository instance.
 
     Args:
@@ -92,7 +91,7 @@ def get_todo_service() -> TodoService:
 
 
 @lru_cache
-def get_user_repository(database: DatabaseConnection = None) -> UserRepositoryInterface:
+def get_user_repository(database: DatabaseConnection | None = None) -> UserRepositoryInterface:
     """Get the User repository instance.
 
     Args:

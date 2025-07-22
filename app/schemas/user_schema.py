@@ -30,11 +30,14 @@ class UserResponse(BaseModel):
 
     @field_validator("id", mode="before")
     @classmethod
-    def convert_uuid_to_string(cls, v: object) -> str:
+    def convert_uuid_to_string(cls, v: str | UUID) -> str:
         """Convert UUID to string if needed."""
         if isinstance(v, UUID):
             return str(v)
-        return v
+        if isinstance(v, str):
+            return v
+        msg = f"Invalid type for id: {type(v)}. Expected UUID or str."
+        raise TypeError(msg)
 
     class Config:
         """Pydantic model configuration."""

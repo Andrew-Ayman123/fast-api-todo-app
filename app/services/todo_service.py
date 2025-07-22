@@ -12,6 +12,7 @@ from app.repositories.todo_repository_interface import TodoRepositoryInterface
 from app.schemas.todo_schema import (
     TodoListCreateRequest,
     TodoListItemsAddRequest,
+    TodoListItemUpdateItem,
     TodoListItemUpdateRequest,
     TodoListUpdateRequest,
 )
@@ -327,14 +328,14 @@ class TodoService:
     async def update_many_todo_list_items(
         self,
         todo_id: uuid.UUID,
-        updates: list[TodoListItemUpdateRequest],
+        updates: list[TodoListItemUpdateItem],
         user_id: uuid.UUID,
     ) -> list[TodoListItemModel]:
         """Update multiple items in a user's todo list.
 
         Args:
             todo_id (uuid.UUID): ID of the todo list containing the items to update.
-            updates (list[TodoListItemUpdateRequest]): List of update requests for the todo items.
+            updates (list[TodoListItemUpdateItem]): List of update requests for the todo items.
             user_id (uuid.UUID): ID of the user updating the items.
 
         Returns:
@@ -347,7 +348,8 @@ class TodoService:
         """
         updated_items = []
         for update in updates:
-            item = await self.todo_repository.update_todo_list_item(todo_id, update, update, user_id)
+            update_id = uuid.UUID(update.id)
+            item = await self.todo_repository.update_todo_list_item(todo_id, update_id, update.data, user_id)
             if not item:
                 raise TodoListNotFoundError(todo_id)
             updated_items.append(item)

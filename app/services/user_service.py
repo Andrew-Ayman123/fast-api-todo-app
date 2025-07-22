@@ -43,6 +43,8 @@ class UserService:
         password_hash = hash_password(user_data.password)
         try:
             user = await self.user_repository.create_user(user_data.email, user_data.username, password_hash)
+            if not user:
+                raise UserAlreadyExistsError(user_data.email)
         except IntegrityError as e:
             raise UserAlreadyExistsError(user_data.email) from e
         else:
@@ -79,5 +81,5 @@ class UserService:
             raise WrongEmailOrPasswordError
 
         # check if user exists with the provided password
-        if not verify_password(user_login_request.password, user.password_hash):
+        if not verify_password(user_login_request.password, user.password):
             raise WrongEmailOrPasswordError

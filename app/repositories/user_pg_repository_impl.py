@@ -11,7 +11,6 @@ from sqlalchemy.future import select
 from app.config.database import DatabaseConnection
 from app.models.user_model import UserModel
 from app.repositories.user_repository_interface import UserRepositoryInterface
-from app.schemas.user_schema import UserResponse
 from app.utils.logger_util import get_logger
 
 
@@ -27,7 +26,7 @@ class UserPGRepository(UserRepositoryInterface):
         """
         self.database = database
 
-    async def create_user(self, email: str, username: str, password_hash: str) -> UserResponse:
+    async def create_user(self, email: str, username: str, password_hash: str) -> UserModel | None:
         """Create a new user in the PostgreSQL database.
 
         Args:
@@ -36,16 +35,17 @@ class UserPGRepository(UserRepositoryInterface):
             password_hash (str): The user's hashed password.
 
         Returns:
-            UserResponse: The created user data.
+            UserModel | None: The created user data.
 
         """
         get_logger().debug("Creating new user with email: %s", email)
         async with self.database.async_session() as session:
+            # Instantiate UserModel using keyword arguments matching its fields
             new_user = UserModel(
                 id=uuid.uuid4(),
                 email=email,
                 username=username,
-                password_hash=password_hash,
+                password=password_hash,
             )
             session.add(new_user)
             try:
@@ -55,7 +55,7 @@ class UserPGRepository(UserRepositoryInterface):
                 await session.rollback()
                 raise
             else:
-                return UserResponse.model_validate(new_user)
+                return new_user
 
     async def get_user_by_id(self, user_id: uuid.UUID) -> UserModel | None:
         """Get user data by ID.

@@ -5,28 +5,36 @@ Defines the UserModel for authentication and ownership of todos.
 
 import uuid
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    """Base class for all models using SQLAlchemy's declarative system."""
+
 
 class UserModel(Base):
     """SQLAlchemy User model - represents the users table."""
 
     __tablename__ = "users"
-    id = Column(
+
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
         unique=True,
         nullable=False,
     )
-    email = Column(String(200), unique=True, nullable=False)
-    username = Column(String(100), nullable=False)
-    password_hash = Column(String(200), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    email: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    username: Mapped[str] = mapped_column(String(100), nullable=False)
+    password: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+    )
 
     todos = relationship("TodoListModel", back_populates="user")

@@ -4,7 +4,7 @@ def build_postgres_connection_string(
     database_user: str,
     database_password: str,
     database_host: str,
-    database_port: str,
+    database_port: int,
     database_name: str,
 ) -> str:
     """Build async PostgreSQL connection string.
@@ -13,7 +13,7 @@ def build_postgres_connection_string(
         database_user (str): Database username
         database_password (str): Database password
         database_host (str): Database host
-        database_port (str): Database port
+        database_port (int): Database port
         database_name (str): Database name
 
     Returns:
