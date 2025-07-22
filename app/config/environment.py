@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     database_name: str = get_env("DATABASE_NAME", "todoapp")
     database_user: str = get_env("DATABASE_USER", "user")
     database_password: str = get_env("DATABASE_PASSWORD", "password")
-    database_ssl_mode: str | None = get_env("DATABASE_SSL_MODE", "disable")
 
     database_logging: bool = get_env_bool("DATABASE_LOGGING", default=False)
 
