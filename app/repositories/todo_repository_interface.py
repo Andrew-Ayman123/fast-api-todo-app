@@ -3,7 +3,13 @@
 This module defines the abstract interface for Todo repository operations,
 providing a contract for different repository implementations.
 """
+
+import uuid
 from abc import ABC, abstractmethod
+from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from app.models.todo_model import TodoListItemModel, TodoListModel
 from app.schemas.todo_schema import (
@@ -18,128 +24,69 @@ class TodoRepositoryInterface(ABC):
     """Abstract base class defining the interface for Todo repository operations."""
 
     @abstractmethod
-    async def count_todo_lists(self) -> int:
-        """Count the total number of todo lists in the database."""
+    async def _fetch_one(self, session: AsyncSession, query: Select) -> object | None:
+        """Execute a SELECT query to fetch a single record."""
 
     @abstractmethod
-    async def count_todo_list_items(self, todo_id: int) -> int:
-        """Count the total number of items in a specific todo list."""
-    """Abstract base class defining the interface for Todo repository operations."""
+    async def _fetch_all(self, session: AsyncSession, query: Select) -> list[Any]:
+        """Execute a SELECT query to fetch multiple records."""
 
     @abstractmethod
-    async def create_todo_list(self, todo_data: TodoListCreateRequest) -> TodoListModel:
-        """Create a new todo list.
-
-        Args:
-            todo_data (TodoListCreateRequest): The data for creating a new todo list.
-
-        Returns:
-            TodoListModel: The created todo list with assigned ID.
-
-        """
+    async def create_todo_list(self, todo_data: TodoListCreateRequest, user_id: uuid.UUID) -> TodoListModel:
+        """Create a new todo list for a specific user."""
 
     @abstractmethod
-    async def get_todo_list_by_id(self, todo_id: int) -> TodoListModel | None:
-        """Get a todo list by its ID.
-
-        Args:
-            todo_id (int): The ID of the todo list to retrieve.
-
-        Returns:
-            TodoListModel | None: The todo list if found, None otherwise.
-
-        """
+    async def get_todo_list_by_id(self, todo_id: uuid.UUID, user_id: uuid.UUID) -> TodoListModel | None:
+        """Get a todo list by its ID for a specific user."""
 
     @abstractmethod
-    async def get_all_todo_lists(self, skip: int = 0, limit: int = 100) -> list[TodoListModel]:
-        """Get all todo lists with pagination.
-
-        Args:
-            skip (int, optional): Number of records to skip. Defaults to 0.
-            limit (int, optional): Maximum number of records to return. Defaults to 100.
-
-        Returns:
-            list[TodoListModel]: List of todo lists.
-
-        """
+    async def get_all_todo_lists(
+        self, user_id: uuid.UUID, skip: int = 0, limit: int = 100,
+    ) -> list[TodoListModel]:
+        """Retrieve all todo lists for a user with pagination."""
 
     @abstractmethod
-    async def update_todo_list(self, todo_id: int, todo_data: TodoListUpdateRequest) -> TodoListModel | None:
-        """Update an existing todo list.
-
-        Args:
-            todo_id (int): The ID of the todo list to update.
-            todo_data (TodoListUpdateRequest): The update data for the todo list.
-
-        Returns:
-            TodoListModel | None: The updated todo list if found, None otherwise.
-
-        """
+    async def update_todo_list(
+        self, todo_id: uuid.UUID, todo_data: TodoListUpdateRequest, user_id: uuid.UUID,
+    ) -> TodoListModel | None:
+        """Update a user's todo list by ID."""
 
     @abstractmethod
-    async def delete_todo_list(self, todo_id: int) -> bool:
-        """Delete a todo list by its ID.
-
-        Args:
-            todo_id (int): The ID of the todo list to delete.
-
-        Returns:
-            bool: True if the todo list was deleted, False if not found.
-
-        """
+    async def delete_todo_list(self, todo_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """Delete a user's todo list by ID."""
 
     @abstractmethod
-    async def add_todo_list_item(self, todo_id: int, item_data: TodoListItemsAddRequest) -> TodoListItemModel | None:
-        """Add a new item to a todo list.
-
-        Args:
-            todo_id (int): The ID of the todo list to add the item to.
-            item_data (TodoListItemsAddRequest): The data for the new todo item.
-
-        Returns:
-            TodoListItemModel | None: The created todo item if successful, None if todo list not found.
-
-        """
+    async def add_todo_list_item(
+        self, todo_id: uuid.UUID, item_data: TodoListItemsAddRequest, user_id: uuid.UUID,
+    ) -> TodoListItemModel | None:
+        """Add an item to a user's todo list."""
 
     @abstractmethod
-    async def get_todo_list_items(self, todo_id: int, skip: int = 0, limit: int = 100) -> list[TodoListItemModel]:
-        """Get all items from a todo list with pagination.
-
-        Args:
-            todo_id (int): The ID of the todo list to get items from.
-            skip (int, optional): Number of records to skip. Defaults to 0.
-            limit (int, optional): Maximum number of records to return. Defaults to 100.
-
-        Returns:
-            list[TodoListItemModel]: List of todo items.
-
-        """
+    async def get_todo_list_items(
+        self, todo_id: uuid.UUID, user_id: uuid.UUID, skip: int = 0, limit: int = 100,
+    ) -> list[TodoListItemModel]:
+        """Get items from a user's todo list with pagination."""
 
     @abstractmethod
     async def update_todo_list_item(
-        self, todo_id: int, item_id: int, item_data: TodoListItemUpdateRequest,
+        self,
+        todo_id: uuid.UUID,
+        item_id: uuid.UUID,
+        item_data: TodoListItemUpdateRequest,
+        user_id: uuid.UUID,
     ) -> TodoListItemModel | None:
-        """Update an existing todo list item.
-
-        Args:
-            todo_id (int): The ID of the todo list containing the item.
-            item_id (int): The ID of the todo item to update.
-            item_data (TodoListItemUpdateRequest): The update data for the todo item.
-
-        Returns:
-            TodoListItemModel | None: The updated todo item if found, None otherwise.
-
-        """
+        """Update a user's todo item in a specific todo list."""
 
     @abstractmethod
-    async def delete_todo_list_item(self, todo_id: int, item_id: int) -> bool:
-        """Delete a todo list item by its ID.
+    async def delete_todo_list_item(
+        self, todo_id: uuid.UUID, item_id: uuid.UUID, user_id: uuid.UUID,
+    ) -> bool:
+        """Delete a user's todo item from a todo list."""
 
-        Args:
-            todo_id (int): The ID of the todo list containing the item.
-            item_id (int): The ID of the todo item to delete.
+    @abstractmethod
+    async def count_todo_lists(self, user_id: uuid.UUID) -> int:
+        """Count all todo lists for a specific user."""
 
-        Returns:
-            bool: True if the todo item was deleted, False if not found.
-
-        """
+    @abstractmethod
+    async def count_todo_list_items(self, todo_id: uuid.UUID, user_id: uuid.UUID) -> int:
+        """Count items in a user's specific todo list."""

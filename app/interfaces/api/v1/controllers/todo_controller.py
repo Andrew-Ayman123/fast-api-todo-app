@@ -1,10 +1,12 @@
 """FastAPI Todo API Controller."""
+
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.dependencies import get_todo_service
 from app.exceptions.todo_exception import TodoListItemNotFoundError, TodoListNotFoundError
+from app.middleware.jwt_middleware import JWTBearer
 from app.models.todo_model import TodoListItemModel, TodoListModel
 from app.schemas.todo_schema import (
     PaginatedTodoListItemResponse,
@@ -54,16 +56,18 @@ def _convert_todo_item_to_response(item: TodoListItemModel) -> TodoListItemRespo
     return TodoListItemResponse.model_validate(item)
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(JWTBearer())])
 async def create_todo_list(
     todo: TodoListCreateRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-)-> TodoListResponse:
+    request: Request = None,
+) -> TodoListResponse:
     """Create a new todo list.
 
     Args:
         todo_service (TodoService): The todo service dependency
         todo (TodoListCreateRequest): Todo creation data including title and optional description
+        request (Request): The request object containing user context
 
     Returns:
         TodoListResponse: The created todo with assigned ID
@@ -74,17 +78,19 @@ async def create_todo_list(
 
     """
     try:
-        created_todo = await todo_service.create_todo_list(todo)
+        user_id = request.state.user_id
+        created_todo = await todo_service.create_todo_list(todo, user_id)
         return _convert_todo_to_response(created_todo)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create todo list: {e!s}") from e
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(JWTBearer())])
 async def get_todo_lists(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     page: int = 1,
     size: int = 20,
+    request: Request = None,
 ) -> PaginatedTodoListResponse:
     """Retrieve all todo lists with pagination.
 
@@ -92,6 +98,7 @@ async def get_todo_lists(
         todo_service (TodoService): The todo service dependency
         page (int, optional): Page number. Defaults to 1.
         size (int, optional): Page size. Defaults to 20.
+        request (Request): The request object containing user context
 
     Returns:
         PaginatedTodoListResponse: Paginated list of todos
@@ -102,8 +109,9 @@ async def get_todo_lists(
     """
     try:
         skip = (page - 1) * size
-        todos = await todo_service.get_all_todo_lists_without_items(skip, size)
-        total = await todo_service.count_todo_lists()
+        user_id = request.state.user_id
+        todos = await todo_service.get_all_todo_lists_without_items(user_id, skip, size)
+        total = await todo_service.count_todo_lists(user_id)
         total = total if total is not None else (skip + len(todos))
         total_pages = (total + size - 1) // size if size > 0 else 1
         return PaginatedTodoListResponse(
@@ -116,16 +124,18 @@ async def get_todo_lists(
         raise HTTPException(status_code=404, detail=f"Failed to retrieve todo lists: {e!s}") from e
 
 
-@router.get("/{todo_id}")
+@router.get("/{todo_id}", dependencies=[Depends(JWTBearer())])
 async def get_todo_list_by_id(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    todo_id: int,
+    todo_id: str,
+    request: Request = None,
 ) -> TodoListResponse:
     """Retrieve a specific todo by ID.
 
     Args:
         todo_service (TodoService): The todo service dependency
-        todo_id (int): The unique identifier of the todo
+        todo_id (str): The unique identifier of the todo
+        request (Request): The request object containing user context
 
     Returns:
         TodoListResponse: The requested todo
@@ -136,7 +146,8 @@ async def get_todo_list_by_id(
 
     """
     try:
-        todo = await todo_service.get_todo_list_by_id(todo_id)
+        user_id = request.state.user_id
+        todo = await todo_service.get_todo_list_by_id(todo_id, user_id)
         return _convert_todo_to_response(todo)
     except TodoListNotFoundError as e:
         raise HTTPException(status_code=404, detail="Todo not found") from e
@@ -144,18 +155,20 @@ async def get_todo_list_by_id(
         raise HTTPException(status_code=500, detail=f"Failed to retrieve todo: {e!s}") from e
 
 
-@router.put("/{todo_id}")
+@router.put("/{todo_id}", dependencies=[Depends(JWTBearer())])
 async def update_todo_list(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    todo_id: int,
+    todo_id: str,
     todo: TodoListUpdateRequest,
+    request: Request = None,
 ) -> TodoListResponse:
     """Update an existing todo.
 
     Args:
         todo_service (TodoService): The todo service dependency
-        todo_id (int): The unique identifier of the todo to update
+        todo_id (str): The unique identifier of the todo to update
         todo (TodoListUpdateRequest): Updated todo data (title, description, etc.)
+        request (Request): The request object containing user context
 
     Returns:
         TodoListResponse: The updated todo
@@ -166,7 +179,8 @@ async def update_todo_list(
 
     """
     try:
-        updated_todo = await todo_service.update_todo_list(todo_id, todo)
+        user_id = request.state.user_id
+        updated_todo = await todo_service.update_todo_list(todo_id, todo, user_id)
         return _convert_todo_to_response(updated_todo)
     except TodoListNotFoundError as e:
         raise HTTPException(status_code=404, detail="Todo not found") from e
@@ -174,16 +188,18 @@ async def update_todo_list(
         raise HTTPException(status_code=500, detail=f"Failed to update todo: {e!s}") from e
 
 
-@router.delete("/{todo_id}", status_code=200)
+@router.delete("/{todo_id}", status_code=200, dependencies=[Depends(JWTBearer())])
 async def delete_todo_list(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    todo_id: int,
+    todo_id: str,
+    request: Request = None,
 ) -> None:
     """Delete a todo and all its items.
 
     Args:
         todo_service (TodoService): The todo service dependency
-        todo_id (int): The unique identifier of the todo to delete
+        todo_id (str): The unique identifier of the todo to delete
+        request (Request): The request object containing user context
 
     Returns:
         None: HTTP 200 status on successful deletion
@@ -194,27 +210,30 @@ async def delete_todo_list(
 
     """
     try:
-        await todo_service.delete_todo_list(todo_id)
+        user_id = request.state.user_id
+        await todo_service.delete_todo_list(todo_id, user_id)
     except TodoListNotFoundError as e:
         raise HTTPException(status_code=404, detail="Todo not found") from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete todo: {e!s}") from e
 
 
-@router.get("/{todo_id}/items")
+@router.get("/{todo_id}/items", dependencies=[Depends(JWTBearer())])
 async def get_todo_list_items(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    todo_id: int,
+    todo_id: str,
     page: int = 1,
     size: int = 20,
+    request: Request = None,
 ) -> PaginatedTodoListItemResponse:
     """Retrieve all items from a specific todo with pagination.
 
     Args:
         todo_service (TodoService): The todo service dependency
-        todo_id (int): The unique identifier of the todo
+        todo_id (str): The unique identifier of the todo
         page (int, optional): Page number. Defaults to 1.
         size (int, optional): Page size. Defaults to 20.
+        request (Request): The request object containing user context
 
     Returns:
         PaginatedTodoListItemResponse: Paginated list of todo items
@@ -226,8 +245,9 @@ async def get_todo_list_items(
     """
     try:
         skip = (page - 1) * size
-        items = await todo_service.get_todo_list_items(todo_id, skip, size)
-        total = await todo_service.count_todo_list_items(todo_id)
+        user_id = request.state.user_id
+        items = await todo_service.get_todo_list_items(todo_id, user_id, skip, size)
+        total = await todo_service.count_todo_list_items(todo_id, user_id)
         total = total if total is not None else (skip + len(items))
         total_pages = (total + size - 1) // size if size > 0 else 1
         return PaginatedTodoListItemResponse(
@@ -242,18 +262,20 @@ async def get_todo_list_items(
         raise HTTPException(status_code=500, detail=f"Failed to retrieve todo items: {e!s}") from e
 
 
-@router.post("/{todo_id}/items")
+@router.post("/{todo_id}/items", dependencies=[Depends(JWTBearer())])
 async def add_todo_list_item(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    todo_id: int,
+    todo_id: str,
     item: TodoListItemsAddRequest,
+    request: Request = None,
 ) -> TodoListItemResponse:
     """Add a new item to a specific todo.
 
     Args:
         todo_service (TodoService): The todo service dependency
-        todo_id (int): The unique identifier of the todo
+        todo_id (str): The unique identifier of the todo
         item (TodoListItemsAddRequest): Item creation data including title and optional completion status
+        request (Request): The request object containing user context
 
     Returns:
         TodoListItemResponse: The created todo item with assigned ID
@@ -265,7 +287,8 @@ async def add_todo_list_item(
 
     """
     try:
-        created_item = await todo_service.add_todo_list_item(todo_id, item)
+        user_id = request.state.user_id
+        created_item = await todo_service.add_todo_list_item(todo_id, item, user_id)
         return _convert_todo_item_to_response(created_item)
     except TodoListNotFoundError as e:
         raise HTTPException(status_code=404, detail="Todo not found") from e
@@ -273,20 +296,22 @@ async def add_todo_list_item(
         raise HTTPException(status_code=500, detail=f"Failed to add todo item: {e!s}") from e
 
 
-@router.put("/{todo_id}/items/{item_id}")
+@router.put("/{todo_id}/items/{item_id}", dependencies=[Depends(JWTBearer())])
 async def update_todo_list_item(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    todo_id: int,
-    item_id: int,
+    todo_id: str,
+    item_id: str,
     item: TodoListItemUpdateRequest,
+    request: Request = None,
 ) -> TodoListItemResponse:
     """Update a specific item within a todo.
 
     Args:
         todo_service (TodoService): The todo service dependency
-        todo_id (int): The unique identifier of the todo
-        item_id (int): The unique identifier of the item to update
+        todo_id (str): The unique identifier of the todo
+        item_id (str): The unique identifier of the item to update
         item (TodoListItemUpdateRequest): Updated item data (title, completion status, etc.)
+        request (Request): The request object containing user context
 
     Returns:
         TodoListItemResponse: The updated todo item
@@ -298,7 +323,8 @@ async def update_todo_list_item(
 
     """
     try:
-        updated_item = await todo_service.update_todo_item(todo_id, item_id, item)
+        user_id = request.state.user_id
+        updated_item = await todo_service.update_todo_item(todo_id, item_id, item, user_id)
         return _convert_todo_item_to_response(updated_item)
     except TodoListItemNotFoundError as e:
         raise HTTPException(status_code=404, detail="Todo or item not found") from e
@@ -306,18 +332,20 @@ async def update_todo_list_item(
         raise HTTPException(status_code=500, detail=f"Failed to update todo item: {e!s}") from e
 
 
-@router.delete("/{todo_id}/items/{item_id}", status_code=200)
+@router.delete("/{todo_id}/items/{item_id}", status_code=200, dependencies=[Depends(JWTBearer())])
 async def delete_todo_list_item(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    todo_id: int,
-    item_id: int,
+    todo_id: str,
+    item_id: str,
+    request: Request = None,
 ) -> None:
     """Delete a specific item from a todo.
 
     Args:
         todo_service (TodoService): The todo service dependency
-        todo_id (int): The unique identifier of the todo
-        item_id (int): The unique identifier of the item to delete
+        todo_id (str): The unique identifier of the todo
+        item_id (str): The unique identifier of the item to delete
+        request (Request): The request object containing user context
 
     Returns:
         None: HTTP 200 status on successful deletion
@@ -328,23 +356,26 @@ async def delete_todo_list_item(
 
     """
     try:
-        await todo_service.delete_todo_list_item(todo_id, item_id)
+        user_id = request.state.user_id
+        await todo_service.delete_todo_list_item(todo_id, item_id, user_id)
     except TodoListItemNotFoundError as e:
         raise HTTPException(status_code=404, detail="Todo or item not found") from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete todo item: {e!s}") from e
 
 
-@router.post("/batch")
+@router.post("/batch", dependencies=[Depends(JWTBearer())])
 async def create_many_todo_lists(
     request: TodoListCreateManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
+    req: Request = None,
 ) -> SuccessResponse:
     """Create multiple todo lists at once.
 
     Args:
         todo_service (TodoService): The todo service dependency
         request (TodoListCreateManyRequest): List of todo lists to create
+        req (Request): The request object containing user context
 
     Returns:
         SuccessResponse: Success message with created count
@@ -355,22 +386,25 @@ async def create_many_todo_lists(
 
     """
     try:
-        created_todos = await todo_service.create_many_todo_lists(request.todo_lists)
+        user_id = req.state.user_id
+        created_todos = await todo_service.create_many_todo_lists(request.todo_lists, user_id)
         return SuccessResponse(message=f"Successfully created {len(created_todos)} todo lists")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create todo lists: {e!s}") from e
 
 
-@router.put("/batch")
+@router.put("/batch", dependencies=[Depends(JWTBearer())])
 async def update_many_todo_lists(
     request: TodoListUpdateManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
+    req: Request = None,
 ) -> SuccessResponse:
     """Update multiple todo lists at once.
 
     Args:
         todo_service (TodoService): The todo service dependency
         request (TodoListUpdateManyRequest): List of updates with todo IDs and update data
+        req (Request): The request object containing user context
 
     Returns:
         SuccessResponse: Success message with updated count
@@ -382,7 +416,8 @@ async def update_many_todo_lists(
 
     """
     try:
-        updated_todos = await todo_service.update_many_todo_lists(request.updates)
+        user_id = req.state.user_id
+        updated_todos = await todo_service.update_many_todo_lists(request.updates, user_id)
         return SuccessResponse(message=f"Successfully updated {len(updated_todos)} todo lists")
     except TodoListNotFoundError as e:
         raise HTTPException(status_code=404, detail="One or more todos not found") from e
@@ -390,16 +425,18 @@ async def update_many_todo_lists(
         raise HTTPException(status_code=500, detail=f"Failed to update todo lists: {e!s}") from e
 
 
-@router.delete("/batch", status_code=200)
+@router.delete("/batch", status_code=200, dependencies=[Depends(JWTBearer())])
 async def delete_many_todo_lists(
     request: TodoListDeleteManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
+    req: Request = None,
 ) -> SuccessResponse:
     """Delete multiple todo lists at once.
 
     Args:
         todo_service (TodoService): The todo service dependency
         request (TodoListDeleteManyRequest): List of todo IDs to delete
+        req (Request): The request object containing user context
 
     Returns:
         SuccessResponse: Success message with deleted count
@@ -410,7 +447,8 @@ async def delete_many_todo_lists(
 
     """
     try:
-        await todo_service.delete_many_todo_lists(request.todo_ids)
+        user_id = req.state.user_id
+        await todo_service.delete_many_todo_lists(request.todo_ids, user_id)
         return SuccessResponse(message=f"Successfully deleted {len(request.todo_ids)} todo lists")
     except TodoListNotFoundError as e:
         raise HTTPException(status_code=404, detail="One or more todos not found") from e
@@ -418,18 +456,20 @@ async def delete_many_todo_lists(
         raise HTTPException(status_code=500, detail=f"Failed to delete todo lists: {e!s}") from e
 
 
-@router.post("/{todo_id}/items/batch")
+@router.post("/{todo_id}/items/batch", dependencies=[Depends(JWTBearer())])
 async def create_many_todo_list_items(
-    todo_id: int,
+    todo_id: str,
     request: TodoListItemCreateManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
+    req: Request = None,
 ) -> SuccessResponse:
     """Add multiple items to a specific todo list.
 
     Args:
-        todo_id (int): The unique identifier of the todo list
+        todo_id (str): The unique identifier of the todo list
         todo_service (TodoService): The todo service dependency
         request (TodoListItemCreateManyRequest): List of todo items to add
+        req (Request): The request object containing user context
 
     Returns:
         SuccessResponse: Success message with created count
@@ -441,7 +481,8 @@ async def create_many_todo_list_items(
 
     """
     try:
-        created_items = await todo_service.create_many_todo_list_items(todo_id, request.items)
+        user_id = req.state.user_id
+        created_items = await todo_service.create_many_todo_list_items(todo_id, request.items, user_id)
         return SuccessResponse(message=f"Successfully created {len(created_items)} todo items")
     except TodoListNotFoundError as e:
         raise HTTPException(status_code=404, detail="Todo list not found") from e
@@ -449,18 +490,20 @@ async def create_many_todo_list_items(
         raise HTTPException(status_code=500, detail=f"Failed to create todo items: {e!s}") from e
 
 
-@router.put("/{todo_id}/items/batch")
+@router.put("/{todo_id}/items/batch", dependencies=[Depends(JWTBearer())])
 async def update_many_todo_list_items(
-    todo_id: int,
+    todo_id: str,
     request: TodoListItemUpdateManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
+    req: Request = None,
 ) -> SuccessResponse:
     """Update multiple items in a specific todo list.
 
     Args:
-        todo_id (int): The unique identifier of the todo list
+        todo_id (str): The unique identifier of the todo list
         todo_service (TodoService): The todo service dependency
         request (TodoListItemUpdateManyRequest): List of updates with item IDs and update data
+        req (Request): The request object containing user context
 
     Returns:
         SuccessResponse: Success message with updated count
@@ -472,7 +515,8 @@ async def update_many_todo_list_items(
 
     """
     try:
-        updated_items = await todo_service.update_many_todo_list_items(todo_id, request.updates)
+        user_id = req.state.user_id
+        updated_items = await todo_service.update_many_todo_list_items(todo_id, request.updates, user_id)
         return SuccessResponse(message=f"Successfully updated {len(updated_items)} todo items")
     except TodoListItemNotFoundError as e:
         raise HTTPException(status_code=404, detail="Todo list or one or more items not found") from e
@@ -480,18 +524,20 @@ async def update_many_todo_list_items(
         raise HTTPException(status_code=500, detail=f"Failed to update todo items: {e!s}") from e
 
 
-@router.delete("/{todo_id}/items/batch", status_code=200)
+@router.delete("/{todo_id}/items/batch", status_code=200, dependencies=[Depends(JWTBearer())])
 async def delete_many_todo_list_items(
-    todo_id: int,
+    todo_id: str,
     request: TodoListItemDeleteManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
+    req: Request = None,
 ) -> SuccessResponse:
     """Delete multiple items from a specific todo list.
 
     Args:
-        todo_id (int): The unique identifier of the todo list
+        todo_id (str): The unique identifier of the todo list
         todo_service (TodoService): The todo service dependency
         request (TodoListItemDeleteManyRequest): List of item IDs to delete
+        req (Request): The request object containing user context
 
     Returns:
         SuccessResponse: Success message with deleted count
@@ -502,7 +548,8 @@ async def delete_many_todo_list_items(
 
     """
     try:
-        await todo_service.delete_many_todo_list_items(todo_id, request.item_ids)
+        user_id = req.state.user_id
+        await todo_service.delete_many_todo_list_items(todo_id, request.item_ids, user_id)
         return SuccessResponse(message=f"Successfully deleted {len(request.item_ids)} todo items")
     except TodoListItemNotFoundError as e:
         raise HTTPException(status_code=404, detail="Todo list or one or more items not found") from e

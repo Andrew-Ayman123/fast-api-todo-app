@@ -1,6 +1,7 @@
 """JWT Service for handling JSON Web Tokens (JWT) in a FastAPI application."""
+
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from jose import jwt
 
@@ -23,7 +24,7 @@ class JWTService:
 
     def generate_token(self, user_id: uuid.UUID) -> str:
         """Generate a JWT token for user authentication."""
-        expiration = datetime.now(tz=datetime.timezone.utc) + timedelta(minutes=self.expiration_minutes)
+        expiration = datetime.now(tz=UTC) + timedelta(minutes=self.expiration_minutes)
         payload = {
             "user_id": str(user_id),
             "exp": int(expiration.timestamp()),  # Use standard JWT 'exp' claim with timestamp
@@ -32,7 +33,15 @@ class JWTService:
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
     def decode_token(self, token: str) -> dict:
-        """Decode a JWT token and return the payload."""
+        """Decode a JWT token and return the payload.
+
+        Args:
+            token (str): The JWT token to decode.
+
+        Returns:
+            dict: The decoded payload containing user information.
+
+        """
         try:
             # The jose library automatically handles exp claim validation
             return jwt.decode(token, self.secret_key, algorithms=[self.algorithm])

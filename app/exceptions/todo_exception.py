@@ -4,7 +4,7 @@
 class TodoListNotFoundError(Exception):
     """Exception raised when a todo list is not found."""
 
-    def __init__(self, todo_id: int) -> None:
+    def __init__(self, todo_id: str) -> None:
         """Initialize with the todo ID that was not found.
 
         Args:
@@ -18,7 +18,7 @@ class TodoListNotFoundError(Exception):
 class TodoListItemNotFoundError(Exception):
     """Exception raised when a todo item is not found in a todo list."""
 
-    def __init__(self, todo_id: int, item_id: int) -> None:
+    def __init__(self, todo_id: str, item_id: str) -> None:
         """Initialize with the todo ID and item ID that were not found.
 
         Args:

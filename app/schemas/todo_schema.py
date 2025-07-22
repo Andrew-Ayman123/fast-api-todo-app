@@ -2,8 +2,9 @@
 
 from datetime import datetime
 from typing import ClassVar
+from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class BaseEntitySchema(BaseModel):
@@ -16,9 +17,17 @@ class BaseEntitySchema(BaseModel):
 
     """
 
-    id: int
+    id: str
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def convert_uuid_to_string(cls, v: object) -> str:
+        """Convert UUID to string if needed."""
+        if isinstance(v, UUID):
+            return str(v)
+        return v
 
     class Config:
         """Pydantic model configuration."""
@@ -96,7 +105,6 @@ class TodoListItemResponse(BaseEntitySchema):
     completed: bool = False
 
 
-
 class TodoListResponse(BaseEntitySchema):
     """Schema for todo list response data."""
 
@@ -138,13 +146,21 @@ class TodoListUpdateItem(BaseModel):
     """Schema for updating a single todo list in batch operation.
 
     Args:
-        id (int): ID of the todo list to update.
+        id (str): ID of the todo list to update.
         data (TodoListUpdateRequest): Update data for the todo list.
 
     """
 
-    id: int
+    id: str
     data: TodoListUpdateRequest
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def convert_uuid_to_string(cls, v: object) -> str:
+        """Convert UUID to string if needed."""
+        if isinstance(v, UUID):
+            return str(v)
+        return v
 
 
 class TodoListUpdateManyRequest(BaseModel):
@@ -162,23 +178,29 @@ class TodoListDeleteManyRequest(BaseModel):
     """Schema for deleting multiple todo lists.
 
     Args:
-        todo_ids (list[int]): List of todo list IDs to delete.
+        todo_ids (list[str]): List of todo list IDs to delete.
 
     """
 
-    todo_ids: list[int]
+    todo_ids: list[str]
+
+    @field_validator("todo_ids", mode="before", check_fields=False)
+    @classmethod
+    def convert_uuid_to_string(cls, v: object) -> list[str]:
+        """Convert UUIDs to strings if needed."""
+        if isinstance(v, list):
+            return [str(item) for item in v]
+        return v
 
 
 class TodoListItemCreateManyRequest(BaseModel):
     """Schema for adding multiple items to a todo list.
 
     Args:
-        todo_id (int): ID of the todo list to add items to.
         items (list[TodoListItemsAddRequest]): List of todo items to add.
 
     """
 
-    todo_id: int
     items: list[TodoListItemsAddRequest]
 
 
@@ -186,25 +208,31 @@ class TodoListItemUpdateItem(BaseModel):
     """Schema for updating a single todo list item in batch operation.
 
     Args:
-        id (int): ID of the todo list item to update.
+        id (str): ID of the todo list item to update.
         data (TodoListItemUpdateRequest): Update data for the todo list item.
 
     """
 
-    id: int
+    id: str
     data: TodoListItemUpdateRequest
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def convert_uuid_to_string(cls, v: object) -> str:
+        """Convert UUID to string if needed."""
+        if isinstance(v, UUID):
+            return str(v)
+        return v
 
 
 class TodoListItemUpdateManyRequest(BaseModel):
     """Schema for updating multiple todo list items.
 
     Args:
-        todo_id (int): ID of the todo list containing the items.
         updates (list[TodoListItemUpdateItem]): List of update objects with id and update data.
 
     """
 
-    todo_id: int
     updates: list[TodoListItemUpdateItem]
 
 
@@ -212,13 +240,19 @@ class TodoListItemDeleteManyRequest(BaseModel):
     """Schema for deleting multiple todo list items.
 
     Args:
-        todo_id (int): ID of the todo list containing the items.
         item_ids (list[int]): List of todo list item IDs to delete.
 
     """
 
-    todo_id: int
-    item_ids: list[int]
+    item_ids: list[str]
+
+    @field_validator("todo_ids", mode="before", check_fields=False)
+    @classmethod
+    def convert_uuid_to_string(cls, v: object) -> list[str]:
+        """Convert UUIDs to strings if needed."""
+        if isinstance(v, list):
+            return [str(item) for item in v]
+        return v
 
 
 class SuccessResponse(BaseModel):
