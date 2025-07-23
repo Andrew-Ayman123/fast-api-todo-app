@@ -3,7 +3,7 @@
 
 # Load environment variables from .env file
 if [ -f ".env" ]; then
-    export $(grep -v '^#' .env | grep -v '^$' | sed 's/#.*$//')
+    export $(grep -v '^#' pytest.env | grep -v '^$' | sed 's/#.*$//')
 
 fi
 
@@ -13,14 +13,14 @@ source ./.venv/bin/activate
 echo "Starting PostgreSQL Docker container..."
 
 # Stop and remove existing container if it exists
-if docker ps -a --format 'table {{.Names}}' | grep -q postgres-todo; then
-    echo "Stopping and removing existing postgres-todo container..."
-    docker stop postgres-todo
-    docker rm postgres-todo
+if docker ps -a --format 'table {{.Names}}' | grep -q postgres-todo-test; then
+    echo "Stopping and removing existing postgres-todo-test container..."
+    docker stop postgres-todo-test
+    docker rm postgres-todo-test
 fi
 
 docker run -d \
-    --name postgres-todo \
+    --name postgres-todo-test \
     -e POSTGRES_DB=$DATABASE_NAME \
     -e POSTGRES_USER=$DATABASE_USER \
     -e POSTGRES_PASSWORD=$DATABASE_PASSWORD \
@@ -32,7 +32,7 @@ echo "Waiting for PostgreSQL to be ready..."
 sleep 2
 
 # Check if PostgreSQL is ready
-until docker exec postgres-todo pg_isready -U $DATABASE_USER -d $DATABASE_NAME; do
+until docker exec postgres-todo-test pg_isready -U $DATABASE_USER -d $DATABASE_NAME; do
     echo "Waiting for PostgreSQL to start..."
     sleep 2
 done
@@ -49,7 +49,6 @@ alembic -x url=$DATABASE_URL_ALEMBIC upgrade head
 
 echo "Database migrations completed successfully!"
 
-uv run run.py
 echo "Setup completed successfully!"
 
 

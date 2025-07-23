@@ -49,13 +49,13 @@ async def register_user(
     try:
         user = await user_service.create_user(user_data)
         token = jwt_service.generate_token(user.id)
-
         return UserResponseWithToken(**_convert_user_to_response(user).model_dump(), token=token)
     except UserAlreadyExistsError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
         get_logger().error("Error creating user: %s", str(e))
         raise HTTPException(status_code=400, detail=str(e)) from e
+
 
 
 @router.post("/login")
@@ -82,6 +82,7 @@ async def login_user(
     try:
         user = await user_service.verify_user_exists(login_data)
         token = jwt_service.generate_token(user.id)
+
         return UserResponseWithToken(**_convert_user_to_response(user).model_dump(), token=token)
     except WrongEmailOrPasswordError as e:
         raise HTTPException(status_code=401, detail="Wrong email or password") from e

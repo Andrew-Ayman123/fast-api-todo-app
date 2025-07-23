@@ -190,12 +190,6 @@ class TodoListDeleteManyRequest(BaseModel):
 
     todo_ids: list[str]
 
-    @field_validator("todo_ids", mode="before", check_fields=False)
-    @classmethod
-    def convert_uuid_to_string(cls, v: list[UUID | str]) -> list[str]:
-        """Convert UUIDs to strings if needed."""
-        return [str(item) for item in v]
-
 
 class TodoListItemCreateManyRequest(BaseModel):
     """Schema for adding multiple items to a todo list.

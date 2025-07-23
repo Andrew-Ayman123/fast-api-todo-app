@@ -33,7 +33,6 @@ def get_env_settings() -> Settings:
     return Settings()
 
 
-@lru_cache
 def get_database_engine() -> AsyncEngine:
     """Get the database connection instance.
 
@@ -80,7 +79,7 @@ async def get_database_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-@lru_cache
+
 def get_session_maker() -> async_sessionmaker[AsyncSession]:
     """Get the session maker instance.
 

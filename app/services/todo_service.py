@@ -14,8 +14,10 @@ from app.schemas.todo_schema import (
     TodoListItemsAddRequest,
     TodoListItemUpdateItem,
     TodoListItemUpdateRequest,
+    TodoListUpdateItem,
     TodoListUpdateRequest,
 )
+from app.utils.logger_util import get_logger
 
 
 class TodoService:
@@ -263,7 +265,7 @@ class TodoService:
             created_todos.append(created_todo)
         return created_todos
 
-    async def update_many_todo_lists(self, updates: list, user_id: str) -> list[TodoListModel]:
+    async def update_many_todo_lists(self, updates: list[TodoListUpdateItem], user_id: str) -> list[TodoListModel]:
         """Update multiple todo lists for a user.
 
         Args:
@@ -301,6 +303,7 @@ class TodoService:
 
         """
         for todo_id in todo_ids:
+            get_logger().debug("Deleting todo list with ID: %s for user: %s", todo_id, user_id)
             success = await self.todo_repository.delete_todo_list(uuid.UUID(todo_id), uuid.UUID(user_id))
             if not success:
                 raise TodoListNotFoundError(uuid.UUID(todo_id))

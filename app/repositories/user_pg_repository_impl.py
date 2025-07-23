@@ -6,7 +6,6 @@ using SQLAlchemy ORM for database operations with async session.
 
 import uuid
 
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -54,14 +53,10 @@ class UserPGRepository(UserRepositoryInterface):
 
         self.session.add(new_user)
 
-        try:
-            await self.session.commit()
-            await self.session.refresh(new_user)
-        except IntegrityError:
-            await self.session.rollback()
-            raise
-        else:
-            return new_user
+        await self.session.commit()
+        await self.session.refresh(new_user)
+
+        return new_user
 
     async def get_user_by_id(self, user_id: uuid.UUID) -> UserModel | None:
         """Get user data by ID.

@@ -14,16 +14,19 @@ from sqlalchemy.sql import text
 
 from app.models.user_model import UserModel
 from app.repositories.user_pg_repository_impl import UserPGRepository
-from tests.util_db_test_connection import get_test_db_connection
+from tests.test_dependencies import get_session_maker_test
 
 
 class TestUserRepository:
     """Test suite for UserPGRepository."""
 
-    @pytest.fixture
-    def user_repo(self) -> UserPGRepository:
+    @pytest_asyncio.fixture
+    async def user_repo(self) -> AsyncGenerator[UserPGRepository, None]:
         """Create a fresh test repository instance for each test."""
-        return UserPGRepository(get_test_db_connection())
+        session_maker = get_session_maker_test()
+        async with session_maker() as session:
+            repo = UserPGRepository(session=session)
+            yield repo
 
     @pytest.fixture
     def sample_user_data(self) -> dict[str, str]:
@@ -34,11 +37,8 @@ class TestUserRepository:
     async def cleanup_user_table(self, user_repo: UserPGRepository) -> AsyncGenerator[None, None]:
         """Automatically clear the user table before and after each test."""
         yield
-
-        async with user_repo.database.async_session() as session:
-            await session.execute(text("DELETE FROM users"))
-            await session.commit()
-
+        await user_repo.session.execute(text("DELETE FROM users"))
+        await user_repo.session.commit()
 
     @pytest.mark.asyncio
     async def test_create_user_success(
@@ -69,10 +69,12 @@ class TestUserRepository:
         with pytest.raises(IntegrityError):
             await user_repo.create_user(**sample_user_data)
 
+        # Roll back the session after the exception
+        await user_repo.session.rollback()
+
         # count number of users in the db, should be 1
-        async with user_repo.database.async_session() as session:
-            result = await session.execute(text("SELECT COUNT(*) FROM users"))
-            count = result.scalar_one()
+        result = await user_repo.session.execute(text("SELECT COUNT(*) FROM users"))
+        count = result.scalar_one()
 
         assert count == 1, "There should be only one user in the database after duplicate creation attempt."
 
