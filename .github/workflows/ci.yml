@@ -1,0 +1,75 @@
+# GitHub Actions CI Pipeline for FastAPI Todo App
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: todo_db
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d todo_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://user:password@localhost:5432/todo_db
+      DATABASE_HOST: localhost
+      DATABASE_PORT: 5432
+      DATABASE_NAME: todo_db
+      DATABASE_USER: user
+      DATABASE_PASSWORD: password
+      DATABASE_LOGGING: false
+      DATABASE_URL_ALEMBIC: postgresql://user:password@localhost:5432/todo_db
+      APP_TITLE: Todo_API
+      APP_DESCRIPTION: A_simple Todo API with repository pattern
+      APP_VERSION: 1.0.0
+      APP_NAME: Todo_API
+      DEBUG: true
+      SERVER_HOST: 127.0.0.1
+      SERVER_PORT: 8000
+      SERVER_RELOAD: true
+      SERVER_LOG_LEVEL: info
+      SECRET_KEY: temp-for-ci
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pre-commit
+      - name: Run test-run.sh
+        run: |
+          chmod +x test-run.sh
+          ./test-run.sh
+      - name: Run pytest with coverage
+        run: |
+          source .venv/bin/activate
+          pytest --cov=app --cov-report=xml --cov-report=term
+      - name: Check coverage >= 80%
+        run: |
+          source .venv/bin/activate
+          coverage report --fail-under=80
+      - name: Run pre-commit checks
+        run: |
+          source .venv/bin/activate
+          pre-commit run --all-files
