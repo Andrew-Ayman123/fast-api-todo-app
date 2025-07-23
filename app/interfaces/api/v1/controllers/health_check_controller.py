@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 
-from app.dependencies import get_database
+from app.dependencies import get_database_engine
 from app.schemas.health_check_schema import HealthCheckResponse
 
 #versioning is handled in the main file
@@ -20,7 +20,7 @@ async def health_check() -> HealthCheckResponse:
 
     """
     try:
-        get_database()
+        get_database_engine()  # Ensure the database connection can be established
 
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Database connection failed: {e!s}") from e

@@ -3,9 +3,14 @@
 It provides functions to retrieve instances of database connections, repositories, and services.
 These instances are cached for performance and to ensure that the same instance is reused across requests.
 """
-from functools import lru_cache
 
-from app.config.database import DatabaseConnection
+from collections.abc import AsyncGenerator
+from functools import lru_cache
+from typing import Annotated
+
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+
 from app.config.environment import Settings
 from app.repositories.todo_pg_repository_impl import TodoPGRepository
 from app.repositories.todo_repository_interface import TodoRepositoryInterface
@@ -27,8 +32,9 @@ def get_env_settings() -> Settings:
     """
     return Settings()
 
+
 @lru_cache
-def get_database() -> DatabaseConnection:
+def get_database_engine() -> AsyncEngine:
     """Get the database connection instance.
 
     Returns:
@@ -50,29 +56,60 @@ def get_database() -> DatabaseConnection:
             database_port=settings.database_port,
             database_name=settings.database_name,
         )
+    return create_async_engine(
+        connection_string,
+        echo=settings.database_logging,
+        future=True,
+    )
 
-    return DatabaseConnection(connection_string, enable_echo=settings.database_logging)
+
+async def get_database_session() -> AsyncGenerator[AsyncSession, None]:
+    """Get a database session instance.
+
+    This is typically used as a FastAPI dependency.
+
+    Yields:
+        AsyncSession: The database session instance.
+
+    """
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
 
 
 @lru_cache
-def get_todo_repository(database: DatabaseConnection | None = None) -> TodoRepositoryInterface:
+def get_session_maker() -> async_sessionmaker[AsyncSession]:
+    """Get the session maker instance.
+
+    Returns:
+        async_sessionmaker[AsyncSession]: The session maker instance.
+
+    """
+    engine = get_database_engine()
+    return async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
+def get_todo_repository(session: Annotated[AsyncSession, Depends(get_database_session)]) -> TodoRepositoryInterface:
     """Get the Todo repository instance.
 
     Args:
-        database (DatabaseConnection, optional): An optional DatabaseConnection instance.
-            If not provided, a new one will be created. Defaults to None.
+        session (AsyncSession): The database session instance.
 
     Returns:
         TodoPGRepository: The Todo repository instance.
 
     """
-    if database is None:
-        database = get_database()
-    return TodoPGRepository(database=database)
+    return TodoPGRepository(session=session)
 
 
-@lru_cache
-def get_todo_service() -> TodoService:
+def get_todo_service(todo_repository: Annotated[TodoRepositoryInterface, Depends(get_todo_repository)]) -> TodoService:
     """Get the Todo service instance.
 
     Args:
@@ -83,39 +120,39 @@ def get_todo_service() -> TodoService:
         TodoService: The Todo service instance.
 
     """
-    todo_repository = get_todo_repository()
-
     return TodoService(
         todo_repository=todo_repository,
     )
 
 
-@lru_cache
-def get_user_repository(database: DatabaseConnection | None = None) -> UserRepositoryInterface:
+def get_user_repository(session: Annotated[AsyncSession, Depends(get_database_session)]) -> UserRepositoryInterface:
     """Get the User repository instance.
 
     Args:
-        database (DatabaseConnection, optional): An optional DatabaseConnection instance.
-            If not provided, a new one will be created. Defaults to None.
+        session (AsyncSession, optional): An optional AsyncSession instance.
+            If not provided, a new one will be created. Defaults to Depends(get_database_session).
+
 
     Returns:
         UserPGRepository: The User repository instance.
 
     """
-    if database is None:
-        database = get_database()
-    return UserPGRepository(database=database)
+    return UserPGRepository(session=session)
+
 
 @lru_cache
-def get_user_service() -> UserService:
+def get_user_service(
+    user_repository: Annotated[UserRepositoryInterface, Depends(get_user_repository)],
+) -> UserService:
     """Get the User service instance.
+
+    Args:
+        user_repository (UserRepositoryInterface): The User repository instance.
 
     Returns:
         UserService: The User service instance.
 
     """
-    user_repository = get_user_repository()
-
     return UserService(
         user_repository=user_repository,
     )

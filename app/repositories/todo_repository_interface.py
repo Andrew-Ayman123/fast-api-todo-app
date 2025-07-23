@@ -6,9 +6,8 @@ providing a contract for different repository implementations.
 
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TypeVar
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
 from app.models.todo_model import TodoListItemModel, TodoListModel
@@ -19,16 +18,17 @@ from app.schemas.todo_schema import (
     TodoListUpdateRequest,
 )
 
+T = TypeVar("T")
 
 class TodoRepositoryInterface(ABC):
     """Abstract base class defining the interface for Todo repository operations."""
 
     @abstractmethod
-    async def _fetch_one(self, session: AsyncSession, query: Select) -> object | None:
+    async def _fetch_one(self, query: Select[tuple[T]]) -> T | None:
         """Execute a SELECT query to fetch a single record."""
 
     @abstractmethod
-    async def _fetch_all(self, session: AsyncSession, query: Select) -> list[Any]:
+    async def _fetch_all(self, query: Select[tuple[T]]) -> list[T]:
         """Execute a SELECT query to fetch multiple records."""
 
     @abstractmethod

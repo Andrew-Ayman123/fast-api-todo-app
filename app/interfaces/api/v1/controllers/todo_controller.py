@@ -60,7 +60,7 @@ def _convert_todo_item_to_response(item: TodoListItemModel) -> TodoListItemRespo
 async def create_todo_list(
     todo: TodoListCreateRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    request: Annotated[Request, Depends()],
+    request: Request,
 ) -> TodoListResponse:
     """Create a new todo list.
 
@@ -88,7 +88,7 @@ async def create_todo_list(
 @router.get("/", dependencies=[Depends(JWTBearer())])
 async def get_todo_lists(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    request: Annotated[Request, Depends()],
+    request: Request,
     page: int = 1,
     size: int = 20,
 ) -> PaginatedTodoListResponse:
@@ -128,7 +128,7 @@ async def get_todo_lists(
 async def get_todo_list_by_id(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     todo_id: str,
-    request: Annotated[Request, Depends()],
+    request: Request,
 ) -> TodoListResponse:
     """Retrieve a specific todo by ID.
 
@@ -160,7 +160,7 @@ async def update_todo_list(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     todo_id: str,
     todo: TodoListUpdateRequest,
-    request: Annotated[Request, Depends()],
+    request: Request,
 ) -> TodoListResponse:
     """Update an existing todo.
 
@@ -192,7 +192,7 @@ async def update_todo_list(
 async def delete_todo_list(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     todo_id: str,
-    request: Annotated[Request, Depends()],
+    request: Request,
 ) -> None:
     """Delete a todo and all its items.
 
@@ -221,7 +221,7 @@ async def delete_todo_list(
 @router.get("/{todo_id}/items", dependencies=[Depends(JWTBearer())])
 async def get_todo_list_items(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    request: Annotated[Request, Depends()],
+    request: Request,
     todo_id: str,
     page: int = 1,
     size: int = 20,
@@ -267,7 +267,7 @@ async def add_todo_list_item(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     todo_id: str,
     item: TodoListItemsAddRequest,
-    request: Annotated[Request, Depends()],
+    request: Request,
 ) -> TodoListItemResponse:
     """Add a new item to a specific todo.
 
@@ -302,7 +302,7 @@ async def update_todo_list_item(
     todo_id: str,
     item_id: str,
     item: TodoListItemUpdateRequest,
-    request: Annotated[Request, Depends()],
+    request: Request,
 ) -> TodoListItemResponse:
     """Update a specific item within a todo.
 
@@ -337,7 +337,7 @@ async def delete_todo_list_item(
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     todo_id: str,
     item_id: str,
-    request: Annotated[Request, Depends()],
+    request: Request,
 ) -> None:
     """Delete a specific item from a todo.
 
@@ -368,7 +368,7 @@ async def delete_todo_list_item(
 async def create_many_todo_lists(
     request: TodoListCreateManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    req: Annotated[Request, Depends()],
+    req: Request,
 ) -> SuccessResponse:
     """Create multiple todo lists at once.
 
@@ -397,7 +397,7 @@ async def create_many_todo_lists(
 async def update_many_todo_lists(
     request: TodoListUpdateManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    req: Annotated[Request, Depends()],
+    req: Request,
 ) -> SuccessResponse:
     """Update multiple todo lists at once.
 
@@ -429,7 +429,7 @@ async def update_many_todo_lists(
 async def delete_many_todo_lists(
     request: TodoListDeleteManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    req: Annotated[Request, Depends()],
+    req: Request,
 ) -> SuccessResponse:
     """Delete multiple todo lists at once.
 
@@ -461,7 +461,7 @@ async def create_many_todo_list_items(
     todo_id: str,
     request: TodoListItemCreateManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    req: Annotated[Request, Depends()],
+    req: Request,
 ) -> SuccessResponse:
     """Add multiple items to a specific todo list.
 
@@ -495,7 +495,7 @@ async def update_many_todo_list_items(
     todo_id: str,
     request: TodoListItemUpdateManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    req: Annotated[Request, Depends()],
+    req: Request,
 ) -> SuccessResponse:
     """Update multiple items in a specific todo list.
 
@@ -529,7 +529,7 @@ async def delete_many_todo_list_items(
     todo_id: str,
     request: TodoListItemDeleteManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
-    req: Annotated[Request, Depends()],
+    req: Request,
 ) -> SuccessResponse:
     """Delete multiple items from a specific todo list.
 
