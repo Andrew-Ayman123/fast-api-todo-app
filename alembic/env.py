@@ -31,6 +31,14 @@ target_metadata = Base.metadata
 # ... etc.
 
 
+def get_url() -> str | None:
+    """Get the database URL from command line arguments."""
+    url = context.get_x_argument(as_dictionary=True).get("url")
+    if not url:
+        return None
+    return url
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -43,7 +51,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_url() or config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -62,15 +70,18 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    url = get_url() or config.get_main_option("sqlalchemy.url")
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        url=url,
     )
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata,
+            connection=connection,
+            target_metadata=target_metadata,
         )
 
         with context.begin_transaction():
