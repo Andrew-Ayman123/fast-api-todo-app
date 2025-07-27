@@ -42,7 +42,11 @@ jobs:
       SERVER_PORT: 8000
       SERVER_RELOAD: true
       SERVER_LOG_LEVEL: info
-      SECRET_KEY: temp-for-ci
+      JWT_SECRET_KEY: temp-for-ci
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRATION_MINUTES: 60
+      TESTING: true
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
