@@ -40,7 +40,7 @@ def get_env_int(var_name: str) -> int:
     value = get_env(var_name)
 
     if not value.isdigit():
-        raise EnvironmentVariableFormatError(var_name, "integer")
+        raise EnvironmentVariableFormatError(var_name, value, "integer")
     return int(value)
 
 
@@ -56,6 +56,6 @@ def get_env_bool(var_name: str) -> bool:
     """
     value = get_env(var_name).lower()  # Normalize to lowercase for comparison
     if value not in ("true", "false", "1", "0", "yes", "no"):
-        raise EnvironmentVariableFormatError(var_name, "boolean")
+        raise EnvironmentVariableFormatError(var_name, value, "boolean")
 
     return value in ("true", "1", "yes")
