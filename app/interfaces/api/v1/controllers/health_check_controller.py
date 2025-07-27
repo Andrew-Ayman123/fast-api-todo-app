@@ -20,7 +20,7 @@ async def health_check() -> HealthCheckResponse:
 
     """
     try:
-        await get_database()
+        get_database()
 
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Database connection failed: {e!s}") from e

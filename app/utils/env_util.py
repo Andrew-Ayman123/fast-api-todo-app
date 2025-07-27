@@ -7,7 +7,7 @@ They handle different data types such as string, integer, and boolean.
 import os
 
 
-def get_env(var_name: str, default: str | None = None) -> str | None:
+def get_env(var_name: str, default: str) -> str:
     """Get an environment variable or return a default value if not set.
 
     Args:
@@ -21,7 +21,7 @@ def get_env(var_name: str, default: str | None = None) -> str | None:
     return os.getenv(var_name, default)
 
 
-def get_env_int(var_name: str, default: int | None = None) -> int | None:
+def get_env_int(var_name: str, default: int) -> int:
     """Get an environment variable as an integer or return a default value if not set.
 
     Args:
@@ -33,10 +33,10 @@ def get_env_int(var_name: str, default: int | None = None) -> int | None:
 
     """
     value = os.getenv(var_name, default)
-    return int(value) if value is not None else None
+    return int(value)
 
 
-def get_env_bool(var_name: str, default: str | None = None) -> bool | None:
+def get_env_bool(var_name: str, default: str) -> bool:
     """Retrieve an environment variable and interpret it as a boolean.
 
     Args:

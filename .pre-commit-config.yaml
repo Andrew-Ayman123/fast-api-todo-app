@@ -1,0 +1,22 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff (from system)
+        entry: ruff check
+        language: system
+        types: [python]
+        pass_filenames: true
+
+      - id: bandit
+        name: bandit (with config)
+        entry: bandit -r . --configfile bandit.yaml
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: mypy
+        name: mypy (with config)
+        entry: mypy
+        language: system
+        types: [python]

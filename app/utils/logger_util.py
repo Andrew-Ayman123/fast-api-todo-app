@@ -1,5 +1,7 @@
+"""logging utility module for the FastAPI application."""
 import logging
 from functools import lru_cache
+
 
 @lru_cache
 def get_logger() -> logging.Logger:
