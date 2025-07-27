@@ -24,28 +24,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    env:
-      DATABASE_URL: postgresql+asyncpg://user:password@localhost:5432/todo_db
-      DATABASE_HOST: localhost
-      DATABASE_PORT: 5432
-      DATABASE_NAME: todo_db
-      DATABASE_USER: user
-      DATABASE_PASSWORD: password
-      DATABASE_LOGGING: false
-      DATABASE_URL_ALEMBIC: postgresql://user:password@localhost:5432/todo_db
-      APP_TITLE: Todo_API
-      APP_DESCRIPTION: A_simple Todo API with repository pattern
-      APP_VERSION: 1.0.0
-      APP_NAME: Todo_API
-      DEBUG: true
-      SERVER_HOST: 127.0.0.1
-      SERVER_PORT: 8000
-      SERVER_RELOAD: true
-      SERVER_LOG_LEVEL: info
-      JWT_SECRET_KEY: temp-for-ci
-      JWT_ALGORITHM: HS256
-      JWT_EXPIRATION_MINUTES: 60
-      TESTING: true
 
     steps:
       - name: Checkout code
@@ -54,6 +32,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Load environment variables from .env
+        run: |
+          set -a
+          source pytest.env
+          set +a
       - name: Install uv
         run: |
           pip install uv
