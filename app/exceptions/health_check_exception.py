@@ -1,4 +1,6 @@
 """Custom exceptions for health check operations in the application."""
+
+
 class HealthCheckDatabaseNotHealthyError(Exception):
     """Custom exception for unhealthy database connections."""
 

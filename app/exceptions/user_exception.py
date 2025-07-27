@@ -23,6 +23,7 @@ class UserAlreadyExistsError(Exception):
         self.email = email
         super().__init__(f"User with email {self.email} already exists.")
 
+
 class UserIDNotFoundError(Exception):
     """Exception raised when a user is not found."""
 
@@ -30,6 +31,7 @@ class UserIDNotFoundError(Exception):
         """Initialize with the user ID that was not found."""
         self.user_id = user_id
         super().__init__(f"User with ID {self.user_id} not found.")
+
 
 class UserNotAuthorizedError(Exception):
     """Exception raised when a user is not authorized to perform an action."""

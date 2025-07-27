@@ -20,6 +20,7 @@ from app.schemas.todo_schema import (
 
 T = TypeVar("T")
 
+
 class TodoRepositoryInterface(ABC):
     """Abstract base class defining the interface for Todo repository operations."""
 
@@ -41,13 +42,19 @@ class TodoRepositoryInterface(ABC):
 
     @abstractmethod
     async def get_all_todo_lists(
-        self, user_id: uuid.UUID, skip: int = 0, limit: int = 100,
+        self,
+        user_id: uuid.UUID,
+        skip: int = 0,
+        limit: int = 100,
     ) -> list[TodoListModel]:
         """Retrieve all todo lists for a user with pagination."""
 
     @abstractmethod
     async def update_todo_list(
-        self, todo_id: uuid.UUID, todo_data: TodoListUpdateRequest, user_id: uuid.UUID,
+        self,
+        todo_id: uuid.UUID,
+        todo_data: TodoListUpdateRequest,
+        user_id: uuid.UUID,
     ) -> TodoListModel | None:
         """Update a user's todo list by ID."""
 
@@ -57,13 +64,20 @@ class TodoRepositoryInterface(ABC):
 
     @abstractmethod
     async def add_todo_list_item(
-        self, todo_id: uuid.UUID, item_data: TodoListItemsAddRequest, user_id: uuid.UUID,
+        self,
+        todo_id: uuid.UUID,
+        item_data: TodoListItemsAddRequest,
+        user_id: uuid.UUID,
     ) -> TodoListItemModel | None:
         """Add an item to a user's todo list."""
 
     @abstractmethod
     async def get_todo_list_items(
-        self, todo_id: uuid.UUID, user_id: uuid.UUID, skip: int = 0, limit: int = 100,
+        self,
+        todo_id: uuid.UUID,
+        user_id: uuid.UUID,
+        skip: int = 0,
+        limit: int = 100,
     ) -> list[TodoListItemModel]:
         """Get items from a user's todo list with pagination."""
 
@@ -79,7 +93,10 @@ class TodoRepositoryInterface(ABC):
 
     @abstractmethod
     async def delete_todo_list_item(
-        self, todo_id: uuid.UUID, item_id: uuid.UUID, user_id: uuid.UUID,
+        self,
+        todo_id: uuid.UUID,
+        item_id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> bool:
         """Delete a user's todo item from a todo list."""
 

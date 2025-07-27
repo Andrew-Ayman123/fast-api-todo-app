@@ -4,7 +4,7 @@ It provides functions to retrieve instances of database connections, repositorie
 These instances are cached for performance and to ensure that the same instance is reused across requests.
 """
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from functools import lru_cache
 from typing import Annotated
 
@@ -22,6 +22,17 @@ from app.services.user_service import UserService
 from app.utils.build_db_connection import build_postgres_connection_string
 
 
+def conditional_lru_cache() -> Callable:
+    """Apply LRU cache conditionally based on the environment."""
+
+    def decorator(func: Callable) -> Callable:
+        if Settings().testing:
+            return func  # No caching in testing mode
+        return lru_cache()(func)  # Apply LRU caching otherwise
+
+    return decorator
+
+
 @lru_cache
 def get_env_settings() -> Settings:
     """Get the application settings instance.
@@ -33,6 +44,7 @@ def get_env_settings() -> Settings:
     return Settings()
 
 
+@conditional_lru_cache()
 def get_database_engine() -> AsyncEngine:
     """Get the database connection instance.
 
@@ -62,7 +74,24 @@ def get_database_engine() -> AsyncEngine:
     )
 
 
-async def get_database_session() -> AsyncGenerator[AsyncSession, None]:
+@conditional_lru_cache()
+def get_session_maker(engine: Annotated[AsyncEngine, Depends(get_database_engine)]) -> async_sessionmaker[AsyncSession]:
+    """Get the session maker instance.
+
+    Returns:
+        async_sessionmaker[AsyncSession]: The session maker instance.
+
+    """
+    return async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
+async def get_database_session(
+    session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(get_session_maker)],
+) -> AsyncGenerator[AsyncSession, None]:
     """Get a database session instance.
 
     This is typically used as a FastAPI dependency.
@@ -71,28 +100,11 @@ async def get_database_session() -> AsyncGenerator[AsyncSession, None]:
         AsyncSession: The database session instance.
 
     """
-    session_maker = get_session_maker()
     async with session_maker() as session:
         try:
             yield session
         finally:
             await session.close()
-
-
-
-def get_session_maker() -> async_sessionmaker[AsyncSession]:
-    """Get the session maker instance.
-
-    Returns:
-        async_sessionmaker[AsyncSession]: The session maker instance.
-
-    """
-    engine = get_database_engine()
-    return async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
 
 
 def get_todo_repository(session: Annotated[AsyncSession, Depends(get_database_session)]) -> TodoRepositoryInterface:
@@ -139,7 +151,6 @@ def get_user_repository(session: Annotated[AsyncSession, Depends(get_database_se
     return UserPGRepository(session=session)
 
 
-@lru_cache
 def get_user_service(
     user_repository: Annotated[UserRepositoryInterface, Depends(get_user_repository)],
 ) -> UserService:
@@ -155,6 +166,7 @@ def get_user_service(
     return UserService(
         user_repository=user_repository,
     )
+
 
 @lru_cache
 def get_jwt_service() -> JWTService:

@@ -3,6 +3,7 @@
 This module defines the UserService class, which provides methods for managing users.
 It interacts with the UserRepositoryInterface to perform CRUD operations on users.
 """
+
 import uuid
 
 from sqlalchemy.exc import IntegrityError

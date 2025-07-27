@@ -1,4 +1,5 @@
 """logging utility module for the FastAPI application."""
+
 import logging
 from functools import lru_cache
 

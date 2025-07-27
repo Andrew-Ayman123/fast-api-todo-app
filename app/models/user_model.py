@@ -7,12 +7,10 @@ import uuid
 
 from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-
-class Base(DeclarativeBase):
-    """Base class for all models using SQLAlchemy's declarative system."""
+from app.models.shared_base_model import Base  # shared DeclarativeBase
 
 
 class UserModel(Base):
@@ -31,10 +29,14 @@ class UserModel(Base):
     username: Mapped[str] = mapped_column(String(100), nullable=False)
     password: Mapped[str] = mapped_column(String(200), nullable=False)
     created_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
     updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     todos = relationship("TodoListModel", back_populates="user")

@@ -1,5 +1,6 @@
 """Build a PostgreSQL connection string for asynchronous database connections using asyncpg."""
 
+
 def build_postgres_connection_string(
     database_user: str,
     database_password: str,
@@ -21,7 +22,4 @@ def build_postgres_connection_string(
 
     """
     # Build async connection string from individual components
-    return (
-        f"postgresql+asyncpg://{database_user}:{database_password}"
-        f"@{database_host}:{database_port}/{database_name}"
-    )
+    return f"postgresql+asyncpg://{database_user}:{database_password}@{database_host}:{database_port}/{database_name}"

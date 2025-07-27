@@ -1,4 +1,5 @@
 """JWT middleware for FastAPI to handle Bearer token authentication."""
+
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, Request
@@ -25,7 +26,7 @@ class JWTBearer(HTTPBearer):
         """
         super().__init__(auto_error=True)
 
-    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials |None:
+    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
         """Validate JWT Bearer token from request.
 
         Args:

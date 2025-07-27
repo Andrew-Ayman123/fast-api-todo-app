@@ -57,7 +57,6 @@ async def register_user(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-
 @router.post("/login")
 async def login_user(
     login_data: UserLoginRequest,

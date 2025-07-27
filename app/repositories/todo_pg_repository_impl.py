@@ -182,6 +182,7 @@ class TodoPGRepository(TodoRepositoryInterface):
             .values(**update_data)
             .returning(TodoListModel)
         )
+
         result = await self.session.execute(stmt)
         updated_todo = result.scalar_one_or_none()
 

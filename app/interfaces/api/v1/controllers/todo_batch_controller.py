@@ -1,54 +1,26 @@
 """FastAPI Todo API Controller."""
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.dependencies import get_todo_service
 from app.exceptions.todo_exception import TodoListItemNotFoundError, TodoListNotFoundError
 from app.middleware.jwt_middleware import JWTBearer
-from app.models.todo_model import TodoListItemModel, TodoListModel
 from app.schemas.todo_schema import (
     SuccessResponse,
     TodoListCreateManyRequest,
     TodoListDeleteManyRequest,
     TodoListItemCreateManyRequest,
     TodoListItemDeleteManyRequest,
-    TodoListItemResponse,
     TodoListItemUpdateManyRequest,
-    TodoListResponse,
     TodoListUpdateManyRequest,
 )
 from app.services.todo_service import TodoService
 from app.utils.logger_util import get_logger
 
 router = APIRouter(prefix="/todos-batch", tags=["todos-batch"])
-
-
-def _convert_todo_to_response(todo: TodoListModel) -> TodoListResponse:
-    """Convert TodoListModel to TodoListResponse for consistent API response.
-
-    Args:
-        todo (TodoListModel): The todo model to convert
-
-    Returns:
-        TodoListResponse: The converted todo response object
-
-    """
-    return TodoListResponse.model_validate(todo)
-
-
-def _convert_todo_item_to_response(item: TodoListItemModel) -> TodoListItemResponse:
-    """Convert TodoListItemModel to TodoListItemResponse for consistent API response.
-
-    Args:
-        item (TodoListItemModel): The todo item model to convert
-
-    Returns:
-        TodoListItemResponse: The converted todo item response object
-
-    """
-    return TodoListItemResponse.model_validate(item)
 
 
 @router.post("/", dependencies=[Depends(JWTBearer())])
@@ -141,14 +113,13 @@ async def delete_many_todo_lists(
     except TodoListNotFoundError as e:
         raise HTTPException(status_code=404, detail="One or more todos not found") from e
     except Exception as e:
-
         get_logger().error("Error deleting todo lists: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to delete todo lists: {e!s}") from e
 
 
 @router.post("/{todo_id}/items", dependencies=[Depends(JWTBearer())])
 async def create_many_todo_list_items(
-    todo_id: str,
+    todo_id: UUID,
     request: TodoListItemCreateManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     req: Request,
@@ -156,7 +127,7 @@ async def create_many_todo_list_items(
     """Add multiple items to a specific todo list.
 
     Args:
-        todo_id (str): The unique identifier of the todo list
+        todo_id (UUID): The unique identifier of the todo list
         todo_service (TodoService): The todo service dependency
         request (TodoListItemCreateManyRequest): List of todo items to add
         req (Request): The request object containing user context
@@ -182,7 +153,7 @@ async def create_many_todo_list_items(
 
 @router.put("/{todo_id}/items", dependencies=[Depends(JWTBearer())])
 async def update_many_todo_list_items(
-    todo_id: str,
+    todo_id: UUID,
     request: TodoListItemUpdateManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     req: Request,
@@ -190,7 +161,7 @@ async def update_many_todo_list_items(
     """Update multiple items in a specific todo list.
 
     Args:
-        todo_id (str): The unique identifier of the todo list
+        todo_id (UUID): The unique identifier of the todo list
         todo_service (TodoService): The todo service dependency
         request (TodoListItemUpdateManyRequest): List of updates with item IDs and update data
         req (Request): The request object containing user context
@@ -216,7 +187,7 @@ async def update_many_todo_list_items(
 
 @router.delete("/{todo_id}/items", status_code=200, dependencies=[Depends(JWTBearer())])
 async def delete_many_todo_list_items(
-    todo_id: str,
+    todo_id: UUID,
     request: TodoListItemDeleteManyRequest,
     todo_service: Annotated[TodoService, Depends(get_todo_service)],
     req: Request,

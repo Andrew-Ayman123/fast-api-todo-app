@@ -10,35 +10,29 @@ from collections.abc import AsyncGenerator
 import pytest
 import pytest_asyncio
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
 from app.models.user_model import UserModel
 from app.repositories.user_pg_repository_impl import UserPGRepository
-from tests.test_dependencies import get_session_maker_test
 
 
 class TestUserRepository:
     """Test suite for UserPGRepository."""
 
-    @pytest_asyncio.fixture
-    async def user_repo(self) -> AsyncGenerator[UserPGRepository, None]:
-        """Create a fresh test repository instance for each test."""
-        session_maker = get_session_maker_test()
-        async with session_maker() as session:
-            repo = UserPGRepository(session=session)
-            yield repo
+    @pytest_asyncio.fixture()
+    async def user_repo(self, test_db_session: AsyncSession) -> AsyncGenerator[UserPGRepository, None]:
+        """Fixture to create a UserPGRepository with test DB session."""
+        yield UserPGRepository(session=test_db_session)
 
     @pytest.fixture
     def sample_user_data(self) -> dict[str, str]:
         """Sample user data for testing."""
-        return {"email": "test@example.com", "username": "testuser", "password_hash": "hashed_password_123"}
-
-    @pytest_asyncio.fixture(autouse=True)
-    async def cleanup_user_table(self, user_repo: UserPGRepository) -> AsyncGenerator[None, None]:
-        """Automatically clear the user table before and after each test."""
-        yield
-        await user_repo.session.execute(text("DELETE FROM users"))
-        await user_repo.session.commit()
+        return {
+            "email": "test@example.com",
+            "username": "testuser",
+            "password_hash": "hashed_password_123",
+        }
 
     @pytest.mark.asyncio
     async def test_create_user_success(

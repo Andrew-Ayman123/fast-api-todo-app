@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.models.user_model import Base  # shared DeclarativeBase from user_model
+from app.models.shared_base_model import Base  # shared DeclarativeBase
 
 
 class TodoListModel(Base):

@@ -3,13 +3,14 @@
 This module contains unit tests for the TodoPGRepository using a concrete
 test implementation to verify the expected behavior of all repository methods.
 """
+
 import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.sql import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.todo_model import TodoListItemModel, TodoListModel
 from app.models.user_model import UserModel
@@ -20,27 +21,19 @@ from app.schemas.todo_schema import (
     TodoListItemUpdateRequest,
     TodoListUpdateRequest,
 )
-from tests.test_dependencies import get_session_maker_test
 
 
 class TestTodoRepository:
     """Test suite for TodoPGRepository."""
 
     @pytest_asyncio.fixture
-    async def todo_repo(self) -> AsyncGenerator[TodoPGRepository, None]:
+    async def todo_repo(self, test_db_session: AsyncSession) -> AsyncGenerator[TodoPGRepository, None]:
         """Create a fresh test repository instance for each test."""
-        session_maker = get_session_maker_test()
-        async with session_maker() as session:
-            repo = TodoPGRepository(session=session)
-            yield repo
-
-    user_id: uuid.UUID | None = None
+        yield TodoPGRepository(session=test_db_session)
 
     @pytest_asyncio.fixture
     async def sample_user_id(self, todo_repo: TodoPGRepository) -> uuid.UUID:
         """Sample user ID for testing."""
-        if self.user_id is not None:
-            return self.user_id
         user = UserModel(username="Test User", email="testuser21@example.com", password="hashed")  # noqa: S106
         todo_repo.session.add(user)
         await todo_repo.session.commit()
@@ -57,15 +50,6 @@ class TestTodoRepository:
     def sample_todo_item_data(self) -> dict[str, Any]:
         """Sample todo item data for testing."""
         return {"title": "Test Item", "description": "Test Item Description"}
-
-    @pytest_asyncio.fixture(autouse=True)
-    async def cleanup_tables(self, todo_repo: TodoPGRepository) -> AsyncGenerator[None, None]:
-        """Automatically clear the todo tables before and after each test."""
-        yield
-        await todo_repo.session.execute(text("DELETE FROM todo_items"))
-        await todo_repo.session.execute(text("DELETE FROM todos"))
-        await todo_repo.session.execute(text("DELETE FROM users"))
-        await todo_repo.session.commit()
 
     @pytest.mark.asyncio
     async def test_create_todo_list_success(
@@ -457,7 +441,10 @@ class TestTodoRepository:
         item_update = TodoListItemUpdateRequest(title="Update Title")
 
         result = await todo_repo.update_todo_list_item(
-            created_todo.id, non_existent_item_id, item_update, sample_user_id,
+            created_todo.id,
+            non_existent_item_id,
+            item_update,
+            sample_user_id,
         )
 
         assert result is None
