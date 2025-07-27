@@ -33,11 +33,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Load environment variables from pytest.env
-        shell: bash
-        run: |
-          set -a
-          source <(grep -v '^\s*#' pytest.env | grep -v '^\s*$')
-          set +a
+        uses: falti/dotenv-action@v1.1.4
+        with:
+          path: pytest.env
       - name: Install uv
         run: |
           pip install uv
