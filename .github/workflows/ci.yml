@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           set -a
-          export $(grep -v '^#' pytest.env | grep -v '^$' | sed 's/#.*$//')
+          source <(grep -v '^\s*#' pytest.env | grep -v '^\s*$')
           set +a
       - name: Install uv
         run: |
