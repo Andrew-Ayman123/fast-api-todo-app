@@ -77,7 +77,7 @@ def sample_todo_item_data(sample_todo_data: TodoListModel) -> TodoListItemModel:
         title="Sample Todo Item",
         description="This is a sample todo item for testing purposes.",
         completed=False,
-        todo_list_id=sample_todo_data.id,
+        todo_id=sample_todo_data.id,
     )
 
 @pytest_asyncio.fixture()
