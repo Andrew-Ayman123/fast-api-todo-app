@@ -20,6 +20,7 @@ from app.schemas.todo_schema import (
 )
 
 
+@pytest.mark.usefixtures("reset_user_data_function")
 class TestTodoListItemsAPI:
     """System tests for Todo List Items endpoints."""
 

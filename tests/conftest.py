@@ -16,22 +16,16 @@ from app.models.user_model import UserModel
 from app.schemas.todo_schema import TodoListCreateRequest
 from app.schemas.user_schema import UserCreateRequest
 
-transport = ASGITransport(app=app)
-async_client = AsyncClient(transport=transport, base_url="http://testserver/api/v1")
-
 
 @pytest_asyncio.fixture()
-async def client() -> AsyncClient:
+async def client() -> AsyncGenerator[AsyncClient, None]:
     """Fixture to create an AsyncClient for testing FastAPI endpoints.
 
     It deletes all the data from the users table before yielding the client.
     """
-    session_maker = get_session_maker(get_database_engine())
-    async with session_maker() as session:
-        await session.execute(text("DELETE FROM users"))
-        await session.commit()
-
-    return async_client
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver/api/v1") as async_client:
+        yield async_client
 
 
 @pytest_asyncio.fixture()
@@ -43,9 +37,6 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
     """
     session_maker = get_session_maker(get_database_engine())
     async with session_maker() as session:
-        await session.execute(text("DELETE FROM users"))
-        await session.commit()
-
         yield session
 
 
@@ -59,6 +50,7 @@ def sample_user_data() -> UserModel:
         username="Test User",
     )
 
+
 @pytest.fixture
 def sample_todo_data(sample_user_data: UserModel) -> TodoListModel:
     """Sample todo list data for testing."""
@@ -68,6 +60,7 @@ def sample_todo_data(sample_user_data: UserModel) -> TodoListModel:
         description="This is a sample todo list for testing purposes.",
         user_id=sample_user_data.id,
     )
+
 
 @pytest.fixture
 def sample_todo_item_data(sample_todo_data: TodoListModel) -> TodoListItemModel:
@@ -79,6 +72,7 @@ def sample_todo_item_data(sample_todo_data: TodoListModel) -> TodoListItemModel:
         completed=False,
         todo_id=sample_todo_data.id,
     )
+
 
 @pytest_asyncio.fixture()
 async def auth_token_header(client: AsyncClient, sample_user_data: UserModel) -> dict[str, str]:
@@ -117,3 +111,12 @@ async def todo_list_id(client: AsyncClient, auth_token_header: dict[str, str]) -
     response = await client.post("/todos/", json=payload.model_dump(), headers=auth_token_header)
     assert response.status_code == 200, "Todo list creation failed"
     return response.json()["id"]
+
+
+@pytest_asyncio.fixture(scope="function")
+async def reset_user_data_function() -> AsyncGenerator[None, None]:
+    """Reset user data in the database for function scope tests."""
+    async with get_session_maker(get_database_engine())() as session:
+        await session.execute(text("DELETE FROM users"))
+        await session.commit()
+        yield

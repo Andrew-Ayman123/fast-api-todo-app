@@ -11,7 +11,7 @@ from app.schemas.user_schema import UserCreateRequest, UserLoginRequest
 
 logger = logging.getLogger(__name__)
 
-
+@pytest.mark.usefixtures("reset_user_data_function")
 class TestUserAPI:
     """System tests for user registration, login, and profile endpoints."""
 

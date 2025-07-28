@@ -18,6 +18,7 @@ from app.models.user_model import UserModel
 from app.repositories.user_pg_repository_impl import UserPGRepository
 
 
+@pytest.mark.usefixtures("reset_user_data_function")
 class TestUserRepository:
     """Test suite for UserPGRepository."""
 
