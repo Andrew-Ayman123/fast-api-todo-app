@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.config.database import DatabaseConnection
 from app.models.todo_model import TodoListItemModel, TodoListModel
 from app.repositories.todo_repository_interface import TodoRepositoryInterface
 from app.schemas.todo_schema import (
@@ -30,41 +29,39 @@ T = TypeVar("T")
 class TodoPGRepository(TodoRepositoryInterface):
     """PostgreSQL implementation of Todo repository using SQLAlchemy ORM."""
 
-    def __init__(self, database: DatabaseConnection) -> None:
-        """Initialize the PostgreSQL repository with database connection.
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize the PostgreSQL repository with async session.
 
         Args:
-            database (DatabaseConnection): The database connection instance.
+            session (AsyncSession): The database session instance.
 
         """
-        self.database = database
+        self.session = session
 
-    async def _fetch_one(self, session: AsyncSession, query: Select[tuple[T]]) -> T | None:
+    async def _fetch_one(self, query: Select[tuple[T]]) -> T | None:
         """Fetch one record using SQLAlchemy.
 
         Args:
-            session (AsyncSession): The database session.
             query (Select): The SQLAlchemy query to execute.
 
         Returns:
             T | None: The fetched record if found, None otherwise.
 
         """
-        result = await session.execute(query)
+        result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def _fetch_all(self, session: AsyncSession, query: Select[tuple[T]]) -> list[T]:
+    async def _fetch_all(self, query: Select[tuple[T]]) -> list[T]:
         """Fetch all records using SQLAlchemy.
 
         Args:
-            session (AsyncSession): The database session.
             query (Select): The SQLAlchemy query to execute.
 
         Returns:
             list[T]: List of all fetched records.
 
         """
-        result = await session.execute(query)
+        result = await self.session.execute(query)
         return list(result.scalars().all())
 
     async def create_todo_list(self, todo_data: TodoListCreateRequest, user_id: uuid.UUID) -> TodoListModel:
@@ -79,17 +76,15 @@ class TodoPGRepository(TodoRepositoryInterface):
 
         """
         get_logger().debug("Creating new todo list with title: %s for user: %s", todo_data.title, user_id)
-        async with self.database.async_session() as session:
-            new_todo = TodoListModel(title=todo_data.title, description=todo_data.description, user_id=user_id)
-            session.add(new_todo)
-            await session.commit()
-            await session.refresh(new_todo)
 
-            # Ensure todo_items relationship is loaded before session closes
-            # For a new todo, this will be an empty list
-            await session.refresh(new_todo, ["todo_items"])
-            get_logger().info("Successfully created todo list with ID: %s for user: %s", new_todo.id, user_id)
-            return new_todo
+        new_todo = TodoListModel(title=todo_data.title, description=todo_data.description, user_id=user_id)
+        self.session.add(new_todo)
+        await self.session.commit()
+        await self.session.refresh(new_todo)
+
+        await self.session.refresh(new_todo, ["todo_items"])
+        get_logger().info("Successfully created todo list with ID: %s for user: %s", new_todo.id, user_id)
+        return new_todo
 
     async def get_todo_list_by_id(self, todo_id: uuid.UUID, user_id: uuid.UUID) -> TodoListModel | None:
         """Get todo by ID for a specific user using SQLAlchemy fetch_one equivalent.
@@ -103,18 +98,18 @@ class TodoPGRepository(TodoRepositoryInterface):
 
         """
         get_logger().debug("Fetching todo list by ID: %s for user: %s", todo_id, user_id)
-        async with self.database.async_session() as session:
-            query = (
-                select(TodoListModel)
-                .options(selectinload(TodoListModel.todo_items))
-                .where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
-            )
-            result = await self._fetch_one(session, query)
-            if result:
-                get_logger().info("Successfully retrieved todo list ID: %s for user: %s", todo_id, user_id)
-            else:
-                get_logger().warning("Todo list with ID: %s not found for user: %s", todo_id, user_id)
-            return result
+
+        query = (
+            select(TodoListModel)
+            .options(selectinload(TodoListModel.todo_items))
+            .where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
+        )
+        result = await self._fetch_one(query)
+        if result:
+            get_logger().info("Successfully retrieved todo list ID: %s for user: %s", todo_id, user_id)
+        else:
+            get_logger().warning("Todo list with ID: %s not found for user: %s", todo_id, user_id)
+        return result
 
     async def get_all_todo_lists(self, user_id: uuid.UUID, skip: int = 0, limit: int = 100) -> list[TodoListModel]:
         """Get all todos for a user with pagination using SQLAlchemy fetch_all equivalent.
@@ -129,21 +124,24 @@ class TodoPGRepository(TodoRepositoryInterface):
 
         """
         get_logger().debug("Fetching all todo lists for user: %s with skip: %s, limit: %s", user_id, skip, limit)
-        async with self.database.async_session() as session:
-            query = (
-                select(TodoListModel)
-                .options(selectinload(TodoListModel.todo_items))
-                .where(TodoListModel.user_id == user_id)
-                .offset(skip)
-                .limit(limit)
-                .order_by(TodoListModel.created_at.desc())
-            )
-            result = await self._fetch_all(session, query)
-            get_logger().info("Successfully retrieved %s todo lists for user: %s", len(result), user_id)
-            return result
+
+        query = (
+            select(TodoListModel)
+            .options(selectinload(TodoListModel.todo_items))
+            .where(TodoListModel.user_id == user_id)
+            .offset(skip)
+            .limit(limit)
+            .order_by(TodoListModel.created_at.desc())
+        )
+        result = await self._fetch_all(query)
+        get_logger().info("Successfully retrieved %s todo lists for user: %s", len(result), user_id)
+        return result
 
     async def update_todo_list(
-        self, todo_id: uuid.UUID, todo_data: TodoListUpdateRequest, user_id: uuid.UUID,
+        self,
+        todo_id: uuid.UUID,
+        todo_data: TodoListUpdateRequest,
+        user_id: uuid.UUID,
     ) -> TodoListModel | None:
         """Update todo by ID for a specific user using SQLAlchemy direct update.
 
@@ -157,45 +155,43 @@ class TodoPGRepository(TodoRepositoryInterface):
 
         """
         get_logger().debug("Updating todo list with ID: %s for user: %s", todo_id, user_id)
-        async with self.database.async_session() as session:
-            # Perform direct update and check affected rows
-            update_data = todo_data.model_dump(exclude_unset=True)
-            if not update_data:
-                get_logger().info("No fields to update for todo list ID: %s, returning existing todo", todo_id)
-                # No fields to update, fetch and return existing todo
-                query = (
-                    select(TodoListModel)
-                    .options(selectinload(TodoListModel.todo_items))
-                    .where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
-                )
-                todo_list = await self._fetch_one(session, query)
-                if not todo_list:
-                    get_logger().warning("Todo list with ID: %s not found for user: %s for update", todo_id, user_id)
-                    return None
-                get_logger().info("Returning existing todo list ID: %s for user: %s", todo_id, user_id)
-                return todo_list
 
-            get_logger().debug("Updating todo list ID: %s for user: %s with data: %s", todo_id, user_id, update_data)
-            stmt = (
-                update(TodoListModel)
+        update_data = todo_data.model_dump(exclude_unset=True)
+        if not update_data:
+            get_logger().info("No fields to update for todo list ID: %s, returning existing todo", todo_id)
+
+            query = (
+                select(TodoListModel)
+                .options(selectinload(TodoListModel.todo_items))
                 .where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
-                .values(**update_data)
-                .returning(TodoListModel)
             )
-            result = await session.execute(stmt)
-            updated_todo = result.scalar_one_or_none()
-
-            # Check if any rows were affected (todo exists and is owned by user)
-            if updated_todo is None:
+            todo_list = await self._fetch_one(query)
+            if not todo_list:
                 get_logger().warning("Todo list with ID: %s not found for user: %s for update", todo_id, user_id)
                 return None
+            get_logger().info("Returning existing todo list ID: %s for user: %s", todo_id, user_id)
+            return todo_list
 
-            await session.commit()
-            get_logger().info("Successfully updated todo list ID: %s for user: %s", todo_id, user_id)
+        get_logger().debug("Updating todo list ID: %s for user: %s with data: %s", todo_id, user_id, update_data)
+        stmt = (
+            update(TodoListModel)
+            .where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
+            .values(**update_data)
+            .returning(TodoListModel)
+        )
 
-            # Load the todo_items relationship for the updated todo
-            await session.refresh(updated_todo, ["todo_items"])
-            return updated_todo
+        result = await self.session.execute(stmt)
+        updated_todo = result.scalar_one_or_none()
+
+        if updated_todo is None:
+            get_logger().warning("Todo list with ID: %s not found for user: %s for update", todo_id, user_id)
+            return None
+
+        await self.session.commit()
+        get_logger().info("Successfully updated todo list ID: %s for user: %s", todo_id, user_id)
+
+        await self.session.refresh(updated_todo, ["todo_items"])
+        return updated_todo
 
     async def delete_todo_list(self, todo_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """Delete todo by ID for a specific user using SQLAlchemy direct delete.
@@ -209,22 +205,24 @@ class TodoPGRepository(TodoRepositoryInterface):
 
         """
         get_logger().debug("Deleting todo list with ID: %s for user: %s", todo_id, user_id)
-        async with self.database.async_session() as session:
-            # Perform direct delete and check affected rows
-            stmt = delete(TodoListModel).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
-            result = await session.execute(stmt)
 
-            await session.commit()
-            # Return True if any rows were deleted (todo existed and was owned by user)
-            deleted = result.rowcount > 0
-            if deleted:
-                get_logger().info("Successfully deleted todo list ID: %s for user: %s", todo_id, user_id)
-            else:
-                get_logger().warning("Todo list with ID: %s not found for user: %s for deletion", todo_id, user_id)
-            return deleted
+        stmt = delete(TodoListModel).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
+        result = await self.session.execute(stmt)
+
+        await self.session.commit()
+
+        deleted = result.rowcount > 0
+        if deleted:
+            get_logger().info("Successfully deleted todo list ID: %s for user: %s", todo_id, user_id)
+        else:
+            get_logger().warning("Todo list with ID: %s not found for user: %s for deletion", todo_id, user_id)
+        return deleted
 
     async def add_todo_list_item(
-        self, todo_id: uuid.UUID, item_data: TodoListItemsAddRequest, user_id: uuid.UUID,
+        self,
+        todo_id: uuid.UUID,
+        item_data: TodoListItemsAddRequest,
+        user_id: uuid.UUID,
     ) -> TodoListItemModel | None:
         """Add a todo item to a user's todo using SQLAlchemy.
 
@@ -238,44 +236,53 @@ class TodoPGRepository(TodoRepositoryInterface):
 
         """
         get_logger().debug(
-            "Adding item to todo list ID: %s with title: %s for user: %s", todo_id, item_data.title, user_id,
+            "Adding item to todo list ID: %s with title: %s for user: %s",
+            todo_id,
+            item_data.title,
+            user_id,
         )
-        async with self.database.async_session() as session:
-            # First verify the todo list exists and is owned by the user
-            todo_query = select(TodoListModel).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
-            todo_exists = await self._fetch_one(session, todo_query)
 
-            if not todo_exists:
-                get_logger().warning("Todo list ID: %s not found for user: %s", todo_id, user_id)
-                return None
+        todo_query = select(TodoListModel).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
+        todo_exists = await self._fetch_one(todo_query)
 
-            try:
-                # Create new item
-                new_item = TodoListItemModel(
-                    todo_id=todo_id,
-                    title=item_data.title,
-                    description=item_data.description,
-                    completed=False,
-                )
+        if not todo_exists:
+            get_logger().warning("Todo list ID: %s not found for user: %s", todo_id, user_id)
+            return None
 
-                session.add(new_item)
-                await session.commit()
-                await session.refresh(new_item)
-                get_logger().info(
-                    "Successfully added item ID: %s to todo list ID: %s for user: %s", new_item.id, todo_id, user_id,
-                )
-            except IntegrityError:
-                # If foreign key constraint fails, rollback and return None
-                await session.rollback()
-                get_logger().warning(
-                    "Failed to add item to todo list ID: %s for user: %s - integrity error", todo_id, user_id,
-                )
-                return None
-            else:
-                return new_item
+        try:
+            new_item = TodoListItemModel(
+                todo_id=todo_id,
+                title=item_data.title,
+                description=item_data.description,
+                completed=False,
+            )
+
+            self.session.add(new_item)
+            await self.session.commit()
+            await self.session.refresh(new_item)
+            get_logger().info(
+                "Successfully added item ID: %s to todo list ID: %s for user: %s",
+                new_item.id,
+                todo_id,
+                user_id,
+            )
+        except IntegrityError:
+            await self.session.rollback()
+            get_logger().warning(
+                "Failed to add item to todo list ID: %s for user: %s - integrity error",
+                todo_id,
+                user_id,
+            )
+            return None
+        else:
+            return new_item
 
     async def get_todo_list_items(
-        self, todo_id: uuid.UUID, user_id: uuid.UUID, skip: int = 0, limit: int = 100,
+        self,
+        todo_id: uuid.UUID,
+        user_id: uuid.UUID,
+        skip: int = 0,
+        limit: int = 100,
     ) -> list[TodoListItemModel]:
         """Get todo items for a specific user's todo using SQLAlchemy fetch_all equivalent.
 
@@ -291,24 +298,30 @@ class TodoPGRepository(TodoRepositoryInterface):
 
         """
         get_logger().debug(
-            "Fetching items for todo list ID: %s for user: %s with skip: %s, limit: %s", todo_id, user_id, skip, limit,
+            "Fetching items for todo list ID: %s for user: %s with skip: %s, limit: %s",
+            todo_id,
+            user_id,
+            skip,
+            limit,
         )
-        async with self.database.async_session() as session:
-            # Join with TodoListModel to ensure user ownership
-            query = (
-                select(TodoListItemModel)
-                .join(TodoListModel, TodoListItemModel.todo_id == TodoListModel.id)
-                .where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
-                .order_by(TodoListItemModel.created_at)
-                .offset(skip)
-                .limit(limit)
-            )
 
-            result = await self._fetch_all(session, query)
-            get_logger().info(
-                "Successfully retrieved %s items for todo list ID: %s for user: %s", len(result), todo_id, user_id,
-            )
-            return result
+        query = (
+            select(TodoListItemModel)
+            .join(TodoListModel, TodoListItemModel.todo_id == TodoListModel.id)
+            .where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
+            .order_by(TodoListItemModel.created_at)
+            .offset(skip)
+            .limit(limit)
+        )
+
+        result = await self._fetch_all(query)
+        get_logger().info(
+            "Successfully retrieved %s items for todo list ID: %s for user: %s",
+            len(result),
+            todo_id,
+            user_id,
+        )
+        return result
 
     async def update_todo_list_item(
         self,
@@ -330,64 +343,70 @@ class TodoPGRepository(TodoRepositoryInterface):
 
         """
         get_logger().debug("Updating todo item ID: %s in todo list ID: %s for user: %s", item_id, todo_id, user_id)
-        async with self.database.async_session() as session:
-            # Perform direct update and check affected rows
-            update_data = item_data.model_dump(exclude_unset=True)
-            if not update_data:
-                get_logger().info(
-                    "No fields to update for todo item ID: %s in todo list ID: %s, returning existing item",
+
+        update_data = item_data.model_dump(exclude_unset=True)
+        if not update_data:
+            get_logger().info(
+                "No fields to update for todo item ID: %s in todo list ID: %s, returning existing item",
+                item_id,
+                todo_id,
+            )
+
+            query = (
+                select(TodoListItemModel)
+                .join(TodoListModel, TodoListItemModel.todo_id == TodoListModel.id)
+                .where(
+                    TodoListModel.id == todo_id,
+                    TodoListModel.user_id == user_id,
+                    TodoListItemModel.id == item_id,
+                )
+            )
+            todo_list_item = await self._fetch_one(query)
+            if not todo_list_item:
+                get_logger().warning(
+                    "Todo item ID: %s not found in todo list ID: %s for user: %s for update",
                     item_id,
                     todo_id,
+                    user_id,
                 )
-                # No fields to update, fetch and return existing item
-                query = (
-                    select(TodoListItemModel)
-                    .join(TodoListModel, TodoListItemModel.todo_id == TodoListModel.id)
-                    .where(
-                        TodoListModel.id == todo_id, TodoListModel.user_id == user_id, TodoListItemModel.id == item_id,
-                    )
-                )
-                todo_list_item = await self._fetch_one(session, query)
-                if not todo_list_item:
-                    get_logger().warning(
-                        "Todo item ID: %s not found in todo list ID: %s for user: %s for update",
-                        item_id,
-                        todo_id,
-                        user_id,
-                    )
-                    return None
-                return todo_list_item
+                return None
+            return todo_list_item
 
-            get_logger().debug(
-                "Updating todo item ID: %s in todo list ID: %s for user: %s with data: %s",
+        get_logger().debug(
+            "Updating todo item ID: %s in todo list ID: %s for user: %s with data: %s",
+            item_id,
+            todo_id,
+            user_id,
+            update_data,
+        )
+
+        subquery = select(TodoListModel.id).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
+        stmt = (
+            update(TodoListItemModel)
+            .where(TodoListItemModel.todo_id.in_(subquery), TodoListItemModel.id == item_id)
+            .values(**update_data)
+            .returning(TodoListItemModel)
+        )
+        result = await self.session.execute(stmt)
+        updated_item = result.scalar_one_or_none()
+
+        if updated_item is None:
+            get_logger().warning(
+                "Todo item ID: %s not found in todo list ID: %s for user: %s for update",
                 item_id,
                 todo_id,
                 user_id,
-                update_data,
             )
-            # Update with subquery to ensure user ownership
-            subquery = select(TodoListModel.id).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
-            stmt = (
-                update(TodoListItemModel)
-                .where(TodoListItemModel.todo_id.in_(subquery), TodoListItemModel.id == item_id)
-                .values(**update_data)
-                .returning(TodoListItemModel)
-            )
-            result = await session.execute(stmt)
-            updated_item = result.scalar_one_or_none()
+            return None
 
-            # Check if any rows were affected (item exists and belongs to user's todo)
-            if updated_item is None:
-                get_logger().warning(
-                    "Todo item ID: %s not found in todo list ID: %s for user: %s for update", item_id, todo_id, user_id,
-                )
-                return None
-
-            await session.commit()
-            get_logger().info(
-                "Successfully updated todo item ID: %s in todo list ID: %s for user: %s", item_id, todo_id, user_id,
-            )
-            return updated_item
+        await self.session.commit()
+        get_logger().info(
+            "Successfully updated todo item ID: %s in todo list ID: %s for user: %s",
+            item_id,
+            todo_id,
+            user_id,
+        )
+        return updated_item
 
     async def delete_todo_list_item(self, todo_id: uuid.UUID, item_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """Delete a todo item for a specific user using SQLAlchemy direct delete.
@@ -402,32 +421,32 @@ class TodoPGRepository(TodoRepositoryInterface):
 
         """
         get_logger().debug("Deleting todo item ID: %s from todo list ID: %s for user: %s", item_id, todo_id, user_id)
-        async with self.database.async_session() as session:
-            # Delete with subquery to ensure user ownership
-            subquery = select(TodoListModel.id).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
-            stmt = delete(TodoListItemModel).where(
-                TodoListItemModel.todo_id.in_(subquery), TodoListItemModel.id == item_id,
-            )
-            result = await session.execute(stmt)
 
-            await session.commit()
-            # Return True if any rows were deleted (item existed and belonged to user's todo)
-            deleted = result.rowcount > 0
-            if deleted:
-                get_logger().info(
-                    "Successfully deleted todo item ID: %s from todo list ID: %s for user: %s",
-                    item_id,
-                    todo_id,
-                    user_id,
-                )
-            else:
-                get_logger().warning(
-                    "Todo item ID: %s not found in todo list ID: %s for user: %s for deletion",
-                    item_id,
-                    todo_id,
-                    user_id,
-                )
-            return deleted
+        subquery = select(TodoListModel.id).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
+        stmt = delete(TodoListItemModel).where(
+            TodoListItemModel.todo_id.in_(subquery),
+            TodoListItemModel.id == item_id,
+        )
+        result = await self.session.execute(stmt)
+
+        await self.session.commit()
+
+        deleted = result.rowcount > 0
+        if deleted:
+            get_logger().info(
+                "Successfully deleted todo item ID: %s from todo list ID: %s for user: %s",
+                item_id,
+                todo_id,
+                user_id,
+            )
+        else:
+            get_logger().warning(
+                "Todo item ID: %s not found in todo list ID: %s for user: %s for deletion",
+                item_id,
+                todo_id,
+                user_id,
+            )
+        return deleted
 
     async def count_todo_lists(self, user_id: uuid.UUID) -> int:
         """Count the total number of todo lists for a specific user in the database.
@@ -439,10 +458,9 @@ class TodoPGRepository(TodoRepositoryInterface):
             int: Total number of todo lists for the user.
 
         """
-        async with self.database.async_session() as session:
-            query = select(func.count()).select_from(TodoListModel).where(TodoListModel.user_id == user_id)
-            result = await session.execute(query)
-            return result.scalar_one()
+        query = select(func.count()).select_from(TodoListModel).where(TodoListModel.user_id == user_id)
+        result = await self.session.execute(query)
+        return result.scalar_one()
 
     async def count_todo_list_items(self, todo_id: uuid.UUID, user_id: uuid.UUID) -> int:
         """Count the total number of items in a specific user's todo list.
@@ -455,13 +473,11 @@ class TodoPGRepository(TodoRepositoryInterface):
             int: Total number of items in the todo list if owned by user, 0 otherwise.
 
         """
-        async with self.database.async_session() as session:
-            # Join with TodoListModel to ensure user ownership
-            query = (
-                select(func.count())
-                .select_from(TodoListItemModel)
-                .join(TodoListModel, TodoListItemModel.todo_id == TodoListModel.id)
-                .where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
-            )
-            result = await session.execute(query)
-            return result.scalar_one()
+        query = (
+            select(func.count())
+            .select_from(TodoListItemModel)
+            .join(TodoListModel, TodoListItemModel.todo_id == TodoListModel.id)
+            .where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one()

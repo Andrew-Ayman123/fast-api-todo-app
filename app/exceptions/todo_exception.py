@@ -1,6 +1,5 @@
 """Custom exceptions for the Todo application."""
 
-
 import uuid
 
 

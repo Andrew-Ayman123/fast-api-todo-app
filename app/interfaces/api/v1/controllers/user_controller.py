@@ -17,6 +17,7 @@ from app.services.jwt_service import JWTService
 from app.services.user_service import UserService
 from app.utils.logger_util import get_logger
 
+# versioning is handled in the main file
 router = APIRouter(prefix="/user", tags=["user"])
 
 
@@ -49,7 +50,6 @@ async def register_user(
     try:
         user = await user_service.create_user(user_data)
         token = jwt_service.generate_token(user.id)
-
         return UserResponseWithToken(**_convert_user_to_response(user).model_dump(), token=token)
     except UserAlreadyExistsError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
@@ -82,6 +82,7 @@ async def login_user(
     try:
         user = await user_service.verify_user_exists(login_data)
         token = jwt_service.generate_token(user.id)
+
         return UserResponseWithToken(**_convert_user_to_response(user).model_dump(), token=token)
     except WrongEmailOrPasswordError as e:
         raise HTTPException(status_code=401, detail="Wrong email or password") from e

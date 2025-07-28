@@ -28,7 +28,9 @@ class JWTService:
         expiration = datetime.now(tz=UTC) + timedelta(minutes=self.expiration_minutes)
         payload = {
             "user_id": str(user_id),
-            "exp": int(expiration.timestamp()),  # Use standard JWT 'exp' claim with timestamp
+            "exp": int(
+                expiration.timestamp(),
+            ),  # Use standard JWT 'exp' claim with int(timestamp) for automatic validation
         }
 
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)

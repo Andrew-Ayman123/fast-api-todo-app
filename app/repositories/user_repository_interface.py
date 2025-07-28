@@ -2,6 +2,7 @@
 
 This module defines the abstract interface for User repository operations.
 """
+
 import uuid
 from abc import ABC, abstractmethod
 

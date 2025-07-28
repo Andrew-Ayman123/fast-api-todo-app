@@ -3,6 +3,7 @@
 This module defines the UserService class, which provides methods for managing users.
 It interacts with the UserRepositoryInterface to perform CRUD operations on users.
 """
+
 import uuid
 
 from sqlalchemy.exc import IntegrityError
@@ -75,12 +76,10 @@ class UserService:
             UserModel: The user data if found.
 
         """
-        # get user data by email
         user = await self.user_repository.get_user_by_email(user_login_request.email)
         if not user:
             raise WrongEmailOrPasswordError
 
-        # check if user exists with the provided password
         if not verify_password(user_login_request.password, user.password):
             raise WrongEmailOrPasswordError
 

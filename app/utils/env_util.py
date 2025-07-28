@@ -6,50 +6,56 @@ They handle different data types such as string, integer, and boolean.
 
 import os
 
+from app.exceptions.env_missing_exception import MissingEnvironmentVariableError
+from app.exceptions.env_wrong_format import EnvironmentVariableFormatError
 
-def get_env(var_name: str, default: str) -> str:
+
+def get_env(var_name: str) -> str:
     """Get an environment variable or return a default value if not set.
 
     Args:
         var_name: The name of the environment variable to retrieve
-        default: The default value to return if the variable is not set
 
     Returns:
         The value of the environment variable or the default value if not set
 
     """
-    return os.getenv(var_name, default)
+    value = os.getenv(var_name)
+    if value is None:
+        raise MissingEnvironmentVariableError(var_name)
+
+    return value
 
 
-def get_env_int(var_name: str, default: int) -> int:
+def get_env_int(var_name: str) -> int:
     """Get an environment variable as an integer or return a default value if not set.
 
     Args:
         var_name: The name of the environment variable to retrieve
-        default: The default value to return if the variable is not set
 
     Returns:
         The value of the environment variable as an integer or the default value if not set
 
     """
-    value = os.getenv(var_name, default)
+    value = get_env(var_name)
+
+    if not value.isdigit():
+        raise EnvironmentVariableFormatError(var_name, value, "integer")
     return int(value)
 
 
-def get_env_bool(var_name: str, default: str) -> bool:
+def get_env_bool(var_name: str) -> bool:
     """Retrieve an environment variable and interpret it as a boolean.
 
     Args:
         var_name: Name of the environment variable to fetch.
-        default: Default string value to use if the variable is not set (e.g., 'true', 'false', '1', '0').
 
     Returns:
         Boolean value of the environment variable, or None if not set and no default is provided.
 
     """
-    value = os.getenv(var_name, default)
-    if value is None:
-        return None
-    if isinstance(value, str):
-        value = value.lower()  # Normalize to lowercase for comparison
+    value = get_env(var_name).lower()  # Normalize to lowercase for comparison
+    if value not in ("true", "false", "1", "0", "yes", "no"):
+        raise EnvironmentVariableFormatError(var_name, value, "boolean")
+
     return value in ("true", "1", "yes")
