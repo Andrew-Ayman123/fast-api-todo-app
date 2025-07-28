@@ -55,6 +55,7 @@ def get_database_engine() -> AsyncEngine:
     """
     settings = get_env_settings()
 
+    # Force the use of async support engine for PostgreSQL
     if "postgresql://" in settings.database_url:
         raise DBConnectionAsyncSupportMissingError(
             db_connection=settings.database_url,
@@ -162,6 +163,7 @@ def get_user_service(
     )
 
 
+# It's ok to cache JWTService because it is stateless and does not hold any mutable state
 @lru_cache
 def get_jwt_service() -> JWTService:
     """Get the JWT service instance.
