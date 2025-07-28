@@ -76,12 +76,10 @@ class UserService:
             UserModel: The user data if found.
 
         """
-        # get user data by email
         user = await self.user_repository.get_user_by_email(user_login_request.email)
         if not user:
             raise WrongEmailOrPasswordError
 
-        # check if user exists with the provided password
         if not verify_password(user_login_request.password, user.password):
             raise WrongEmailOrPasswordError
 

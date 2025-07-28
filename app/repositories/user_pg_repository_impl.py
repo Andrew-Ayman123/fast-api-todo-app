@@ -43,7 +43,6 @@ class UserPGRepository(UserRepositoryInterface):
         """
         get_logger().debug("Creating new user with email: %s", email)
 
-        # Instantiate UserModel using keyword arguments matching its fields
         new_user = UserModel(
             id=uuid.uuid4(),
             email=email,

@@ -20,6 +20,7 @@ from app.schemas.todo_schema import (
 )
 from app.services.todo_service import TodoService
 
+# versioning is handled in the main file
 router = APIRouter(prefix="/todos", tags=["todos"])
 
 

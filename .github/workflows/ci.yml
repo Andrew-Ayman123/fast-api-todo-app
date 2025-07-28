@@ -1,4 +1,3 @@
-# GitHub Actions CI Pipeline for FastAPI Todo App
 name: CI
 
 on:

@@ -12,6 +12,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config.environment import Settings
+from app.exceptions.db_connection_async_support_missing import DBConnectionAsyncSupportMissingError
 from app.repositories.todo_pg_repository_impl import TodoPGRepository
 from app.repositories.todo_repository_interface import TodoRepositoryInterface
 from app.repositories.user_pg_repository_impl import UserPGRepository
@@ -19,16 +20,16 @@ from app.repositories.user_repository_interface import UserRepositoryInterface
 from app.services.jwt_service import JWTService
 from app.services.todo_service import TodoService
 from app.services.user_service import UserService
-from app.utils.build_db_connection import build_postgres_connection_string
 
 
 def conditional_lru_cache() -> Callable:
     """Apply LRU cache conditionally based on the environment."""
 
     def decorator(func: Callable) -> Callable:
+        # No caching in testing mode because shared loopback in engine cause errors
         if Settings().testing:
-            return func  # No caching in testing mode
-        return lru_cache()(func)  # Apply LRU caching otherwise
+            return func
+        return lru_cache()(func)
 
     return decorator
 
@@ -54,21 +55,14 @@ def get_database_engine() -> AsyncEngine:
     """
     settings = get_env_settings()
 
-    # Build async connection string for SQLAlchemy
-    if settings.database_url:
-        # Convert postgresql:// to postgresql+asyncpg:// for async support
-        connection_string = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
-    else:
-        # Build async connection string from individual components
-        connection_string = build_postgres_connection_string(
-            database_user=settings.database_user,
-            database_password=settings.database_password,
-            database_host=settings.database_host,
-            database_port=settings.database_port,
-            database_name=settings.database_name,
+    if "postgresql://" in settings.database_url:
+        raise DBConnectionAsyncSupportMissingError(
+            db_connection=settings.database_url,
+            needed_engine="postgresql+asyncpg://",
         )
+
     return create_async_engine(
-        connection_string,
+        settings.database_url,
         echo=settings.database_logging,
         future=True,
     )

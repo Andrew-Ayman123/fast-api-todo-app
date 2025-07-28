@@ -70,9 +70,6 @@ class TodoService:
         """
         todo = await self.todo_repository.get_todo_list_by_id(todo_id, user_id)
         if not todo:
-            # Check if todo exists but belongs to another user
-            # This is a simple approach - in a more secure system, you might not want to reveal
-            # whether the todo exists at all for unauthorized users
             raise TodoListNotFoundError(todo_id)
         return todo
 

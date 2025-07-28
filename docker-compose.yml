@@ -1,5 +1,4 @@
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15
     container_name: postgres-todo
@@ -18,7 +17,6 @@ services:
     networks:
       - todo-network
 
-  # FastAPI Application
   app:
     build:
       context: .

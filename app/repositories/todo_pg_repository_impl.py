@@ -82,8 +82,6 @@ class TodoPGRepository(TodoRepositoryInterface):
         await self.session.commit()
         await self.session.refresh(new_todo)
 
-        # Ensure todo_items relationship is eagerly loaded before session closes
-        # For a new todo, this will be an empty list, but to prevent new issues if lazy loading
         await self.session.refresh(new_todo, ["todo_items"])
         get_logger().info("Successfully created todo list with ID: %s for user: %s", new_todo.id, user_id)
         return new_todo
@@ -158,11 +156,10 @@ class TodoPGRepository(TodoRepositoryInterface):
         """
         get_logger().debug("Updating todo list with ID: %s for user: %s", todo_id, user_id)
 
-        # Perform direct update and check affected rows
         update_data = todo_data.model_dump(exclude_unset=True)
         if not update_data:
             get_logger().info("No fields to update for todo list ID: %s, returning existing todo", todo_id)
-            # No fields to update, fetch and return existing todo
+
             query = (
                 select(TodoListModel)
                 .options(selectinload(TodoListModel.todo_items))
@@ -186,7 +183,6 @@ class TodoPGRepository(TodoRepositoryInterface):
         result = await self.session.execute(stmt)
         updated_todo = result.scalar_one_or_none()
 
-        # Check if any rows were affected (todo exists and is owned by user)
         if updated_todo is None:
             get_logger().warning("Todo list with ID: %s not found for user: %s for update", todo_id, user_id)
             return None
@@ -194,7 +190,6 @@ class TodoPGRepository(TodoRepositoryInterface):
         await self.session.commit()
         get_logger().info("Successfully updated todo list ID: %s for user: %s", todo_id, user_id)
 
-        # Load the todo_items relationship for the updated todo
         await self.session.refresh(updated_todo, ["todo_items"])
         return updated_todo
 
@@ -211,12 +206,11 @@ class TodoPGRepository(TodoRepositoryInterface):
         """
         get_logger().debug("Deleting todo list with ID: %s for user: %s", todo_id, user_id)
 
-        # Perform direct delete and check affected rows
         stmt = delete(TodoListModel).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
         result = await self.session.execute(stmt)
 
         await self.session.commit()
-        # Return True if any rows were deleted (todo existed and was owned by user)
+
         deleted = result.rowcount > 0
         if deleted:
             get_logger().info("Successfully deleted todo list ID: %s for user: %s", todo_id, user_id)
@@ -248,7 +242,6 @@ class TodoPGRepository(TodoRepositoryInterface):
             user_id,
         )
 
-        # First verify the todo list exists and is owned by the user
         todo_query = select(TodoListModel).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
         todo_exists = await self._fetch_one(todo_query)
 
@@ -257,7 +250,6 @@ class TodoPGRepository(TodoRepositoryInterface):
             return None
 
         try:
-            # Create new item
             new_item = TodoListItemModel(
                 todo_id=todo_id,
                 title=item_data.title,
@@ -275,7 +267,6 @@ class TodoPGRepository(TodoRepositoryInterface):
                 user_id,
             )
         except IntegrityError:
-            # If foreign key constraint fails, rollback and return None
             await self.session.rollback()
             get_logger().warning(
                 "Failed to add item to todo list ID: %s for user: %s - integrity error",
@@ -314,7 +305,6 @@ class TodoPGRepository(TodoRepositoryInterface):
             limit,
         )
 
-        # Join with TodoListModel to ensure user ownership
         query = (
             select(TodoListItemModel)
             .join(TodoListModel, TodoListItemModel.todo_id == TodoListModel.id)
@@ -354,7 +344,6 @@ class TodoPGRepository(TodoRepositoryInterface):
         """
         get_logger().debug("Updating todo item ID: %s in todo list ID: %s for user: %s", item_id, todo_id, user_id)
 
-        # Perform direct update and check affected rows
         update_data = item_data.model_dump(exclude_unset=True)
         if not update_data:
             get_logger().info(
@@ -362,7 +351,7 @@ class TodoPGRepository(TodoRepositoryInterface):
                 item_id,
                 todo_id,
             )
-            # No fields to update, fetch and return existing item
+
             query = (
                 select(TodoListItemModel)
                 .join(TodoListModel, TodoListItemModel.todo_id == TodoListModel.id)
@@ -390,7 +379,7 @@ class TodoPGRepository(TodoRepositoryInterface):
             user_id,
             update_data,
         )
-        # Update with subquery to ensure user ownership
+
         subquery = select(TodoListModel.id).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
         stmt = (
             update(TodoListItemModel)
@@ -401,7 +390,6 @@ class TodoPGRepository(TodoRepositoryInterface):
         result = await self.session.execute(stmt)
         updated_item = result.scalar_one_or_none()
 
-        # Check if any rows were affected (item exists and belongs to user's todo)
         if updated_item is None:
             get_logger().warning(
                 "Todo item ID: %s not found in todo list ID: %s for user: %s for update",
@@ -434,7 +422,6 @@ class TodoPGRepository(TodoRepositoryInterface):
         """
         get_logger().debug("Deleting todo item ID: %s from todo list ID: %s for user: %s", item_id, todo_id, user_id)
 
-        # Delete with subquery to ensure user ownership
         subquery = select(TodoListModel.id).where(TodoListModel.id == todo_id, TodoListModel.user_id == user_id)
         stmt = delete(TodoListItemModel).where(
             TodoListItemModel.todo_id.in_(subquery),
@@ -443,7 +430,7 @@ class TodoPGRepository(TodoRepositoryInterface):
         result = await self.session.execute(stmt)
 
         await self.session.commit()
-        # Return True if any rows were deleted (item existed and belonged to user's todo)
+
         deleted = result.rowcount > 0
         if deleted:
             get_logger().info(
@@ -486,7 +473,6 @@ class TodoPGRepository(TodoRepositoryInterface):
             int: Total number of items in the todo list if owned by user, 0 otherwise.
 
         """
-        # Join with TodoListModel to ensure user ownership
         query = (
             select(func.count())
             .select_from(TodoListItemModel)

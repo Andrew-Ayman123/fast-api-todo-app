@@ -6,6 +6,7 @@ test implementation to verify the expected behavior of all interface methods.
 
 import uuid
 from collections.abc import AsyncGenerator
+from copy import copy
 
 import pytest
 import pytest_asyncio
@@ -25,48 +26,48 @@ class TestUserRepository:
         """Fixture to create a UserPGRepository with test DB session."""
         yield UserPGRepository(session=test_db_session)
 
-    @pytest.fixture
-    def sample_user_data(self) -> dict[str, str]:
-        """Sample user data for testing."""
-        return {
-            "email": "test@example.com",
-            "username": "testuser",
-            "password_hash": "hashed_password_123",
-        }
-
     @pytest.mark.asyncio
     async def test_create_user_success(
         self,
         user_repo: UserPGRepository,
-        sample_user_data: dict[str, str],
+        sample_user_data: UserModel,
     ) -> None:
         """Test successful user creation."""
-        result = await user_repo.create_user(**sample_user_data)
+        result = await user_repo.create_user(
+            email=sample_user_data.email,
+            username=sample_user_data.username,
+            password_hash=sample_user_data.password,
+        )
         assert result is not None
         assert isinstance(result, UserModel)
-        assert result.email == sample_user_data["email"]
-        assert result.username == sample_user_data["username"]
-        assert result.password == sample_user_data["password_hash"]
+        assert result.email == sample_user_data.email
+        assert result.username == sample_user_data.username
+        assert result.password == sample_user_data.password
         assert isinstance(result.id, uuid.UUID)
 
     @pytest.mark.asyncio
     async def test_create_user_duplicate_email(
         self,
         user_repo: UserPGRepository,
-        sample_user_data: dict[str, str],
+        sample_user_data: UserModel,
     ) -> None:
         """Test user creation with duplicate email should fail."""
-        # Create first user
-        first_user = await user_repo.create_user(**sample_user_data)
+        first_user = await user_repo.create_user(
+            email=sample_user_data.email,
+            username=sample_user_data.username,
+            password_hash=sample_user_data.password,
+        )
         assert first_user is not None
 
         with pytest.raises(IntegrityError):
-            await user_repo.create_user(**sample_user_data)
+            await user_repo.create_user(
+                email=sample_user_data.email,
+                username=sample_user_data.username,
+                password_hash=sample_user_data.password,
+            )
 
-        # Roll back the session after the exception
         await user_repo.session.rollback()
 
-        # count number of users in the db, should be 1
         result = await user_repo.session.execute(text("SELECT COUNT(*) FROM users"))
         count = result.scalar_one()
 
@@ -76,21 +77,23 @@ class TestUserRepository:
     async def test_get_user_by_id_success(
         self,
         user_repo: UserPGRepository,
-        sample_user_data: dict[str, str],
+        sample_user_data: UserModel,
     ) -> None:
         """Test successful user retrieval by ID."""
-        # Create a user first
-        created_user = await user_repo.create_user(**sample_user_data)
+        created_user = await user_repo.create_user(
+            email=sample_user_data.email,
+            username=sample_user_data.username,
+            password_hash=sample_user_data.password,
+        )
         assert created_user is not None
 
-        # Retrieve the user by ID
         result = await user_repo.get_user_by_id(created_user.id)
 
         assert result is not None
         assert result.id == created_user.id
-        assert result.email == sample_user_data["email"]
-        assert result.username == sample_user_data["username"]
-        assert result.password == sample_user_data["password_hash"]
+        assert result.email == sample_user_data.email
+        assert result.username == sample_user_data.username
+        assert result.password == sample_user_data.password
 
     @pytest.mark.asyncio
     async def test_get_user_by_id_not_found(self, user_repo: UserPGRepository) -> None:
@@ -105,21 +108,23 @@ class TestUserRepository:
     async def test_get_user_by_email_success(
         self,
         user_repo: UserPGRepository,
-        sample_user_data: dict[str, str],
+        sample_user_data: UserModel,
     ) -> None:
         """Test successful user retrieval by email."""
-        # Create a user first
-        created_user = await user_repo.create_user(**sample_user_data)
+        created_user = await user_repo.create_user(
+            email=sample_user_data.email,
+            username=sample_user_data.username,
+            password_hash=sample_user_data.password,
+        )
         assert created_user is not None
 
-        # Retrieve the user by email
-        result = await user_repo.get_user_by_email(sample_user_data["email"])
+        result = await user_repo.get_user_by_email(sample_user_data.email)
 
         assert result is not None
         assert result.id == created_user.id
-        assert result.email == sample_user_data["email"]
-        assert result.username == sample_user_data["username"]
-        assert result.password == sample_user_data["password_hash"]
+        assert result.email == sample_user_data.email
+        assert result.username == sample_user_data.username
+        assert result.password == sample_user_data.password
 
     @pytest.mark.asyncio
     async def test_get_user_by_email_not_found(self, user_repo: UserPGRepository) -> None:
@@ -134,21 +139,28 @@ class TestUserRepository:
     async def test_create_multiple_users(self, user_repo: UserPGRepository) -> None:
         """Test creating multiple users with different data."""
         users_data = [
-            {"email": "user1@example.com", "username": "user1", "password_hash": "hash1"},
-            {"email": "user2@example.com", "username": "user2", "password_hash": "hash2"},
-            {"email": "user3@example.com", "username": "user3", "password_hash": "hash3"},
+            UserModel(
+                id=uuid.uuid4(),
+                email=f"user{i}@example.com",
+                username=f"user{i}",
+                password_hash=f"hash{i}",
+            )
+            for i in range(5)
         ]
 
         created_users = []
         for user_data in users_data:
-            user = await user_repo.create_user(**user_data)
+            user = await user_repo.create_user(
+                email=user_data.email,
+                username=user_data.username,
+                password_hash=user_data.password,
+            )
             assert user is not None
             created_users.append(user)
 
-        # Verify all users can be retrieved
         for i, user in enumerate(created_users):
             retrieved_by_id = await user_repo.get_user_by_id(user.id)
-            retrieved_by_email = await user_repo.get_user_by_email(users_data[i]["email"])
+            retrieved_by_email = await user_repo.get_user_by_email(users_data[i].email)
 
             assert retrieved_by_id is not None
             assert retrieved_by_email is not None
@@ -158,21 +170,21 @@ class TestUserRepository:
     async def test_email_case_sensitivity(
         self,
         user_repo: UserPGRepository,
-        sample_user_data: dict[str, str],
+        sample_user_data: UserModel,
     ) -> None:
         """Test email case sensitivity behavior."""
-        # Create user with lowercase email
-        lower_email = sample_user_data["email"].lower()
-        user_data = sample_user_data.copy()
-        user_data["email"] = lower_email
+        lower_email = sample_user_data.email.lower()
+        user_data = copy(sample_user_data)
+        user_data.email = lower_email
 
-        created_user = await user_repo.create_user(**user_data)
+        created_user = await user_repo.create_user(
+            email=user_data.email,
+            username=user_data.username,
+            password_hash=user_data.password,
+        )
         assert created_user is not None
 
-        # Try to retrieve with different case
         upper_email = lower_email.upper()
         result = await user_repo.get_user_by_email(upper_email)
 
-        # This test depends on your business logic - adjust assertion as needed
-        # Most systems treat emails as case-insensitive
-        assert result is None  # Assuming case-sensitive implementation
+        assert result is None

@@ -6,7 +6,6 @@ test implementation to verify the expected behavior of all repository methods.
 
 import uuid
 from collections.abc import AsyncGenerator
-from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -41,55 +40,49 @@ class TestTodoRepository:
         self.user_id = user.id
         return user.id
 
-    @pytest.fixture
-    def sample_todo_data(self) -> dict[str, Any]:
-        """Sample todo list data for testing."""
-        return {"title": "Test Todo", "description": "Test Description"}
-
-    @pytest.fixture
-    def sample_todo_item_data(self) -> dict[str, Any]:
-        """Sample todo item data for testing."""
-        return {"title": "Test Item", "description": "Test Item Description"}
-
     @pytest.mark.asyncio
     async def test_create_todo_list_success(
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test successful todo list creation."""
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         result = await todo_repo.create_todo_list(todo_create, sample_user_id)
 
         assert result is not None
         assert isinstance(result, TodoListModel)
-        assert result.title == sample_todo_data["title"]
-        assert result.description == sample_todo_data["description"]
+        assert result.title == sample_todo_data.title
+        assert result.description == sample_todo_data.description
         assert result.user_id == sample_user_id
         assert isinstance(result.id, uuid.UUID)
-        assert result.todo_items == []  # Should be empty list for new todo
+        assert result.todo_items == []
 
     @pytest.mark.asyncio
     async def test_get_todo_list_by_id_success(
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test successful todo list retrieval by ID."""
-        # Create a todo first
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        # Retrieve the todo by ID
         result = await todo_repo.get_todo_list_by_id(created_todo.id, sample_user_id)
 
         assert result is not None
         assert result.id == created_todo.id
-        assert result.title == sample_todo_data["title"]
-        assert result.description == sample_todo_data["description"]
+        assert result.title == sample_todo_data.title
+        assert result.description == sample_todo_data.description
         assert result.user_id == sample_user_id
 
     @pytest.mark.asyncio
@@ -110,15 +103,16 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test todo list retrieval by ID when user doesn't own the todo."""
-        # Create a todo first
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        # Try to retrieve with different user
         wrong_user_id = uuid.uuid4()
         result = await todo_repo.get_todo_list_by_id(created_todo.id, wrong_user_id)
 
@@ -131,21 +125,26 @@ class TestTodoRepository:
         sample_user_id: uuid.UUID,
     ) -> None:
         """Test successful retrieval of all todo lists for a user."""
-        # Create multiple todos
         todos_data = [
-            {"title": "Todo 1", "description": "Desc 1"},
-            {"title": "Todo 2", "description": "Desc 2"},
-            {"title": "Todo 3", "description": "Desc 3"},
+            TodoListModel(
+                id=uuid.uuid4(),
+                title=f"Todo {i + 1}",
+                description=f"Desc {i + 1}",
+                user_id=sample_user_id,
+            )
+            for i in range(3)
         ]
 
         created_todos = []
         for todo_data in todos_data:
-            todo_create = TodoListCreateRequest(**todo_data)
+            todo_create = TodoListCreateRequest(
+                title=todo_data.title,
+                description=todo_data.description,
+            )
             todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
             assert todo is not None
             created_todos.append(todo)
 
-        # Retrieve all todos
         result = await todo_repo.get_all_todo_lists(sample_user_id)
 
         assert len(result) == len(todos_data)
@@ -166,15 +165,16 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test successful todo list update."""
-        # Create a todo first
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        # Update the todo
         update_data = {"title": "Updated Title", "description": "Updated Description"}
         todo_update = TodoListUpdateRequest(**update_data)
         result = await todo_repo.update_todo_list(created_todo.id, todo_update, sample_user_id)
@@ -205,15 +205,16 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test todo list update when user doesn't own the todo."""
-        # Create a todo first
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        # Try to update with different user
         wrong_user_id = uuid.uuid4()
         update_data = {"title": "Updated Title"}
         todo_update = TodoListUpdateRequest(**update_data)
@@ -226,20 +227,20 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test successful todo list deletion."""
-        # Create a todo first
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        # Delete the todo
         result = await todo_repo.delete_todo_list(created_todo.id, sample_user_id)
 
         assert result is True
 
-        # Verify it's gone
         deleted_todo = await todo_repo.get_todo_list_by_id(created_todo.id, sample_user_id)
         assert deleted_todo is None
 
@@ -261,21 +262,21 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test todo list deletion when user doesn't own the todo."""
-        # Create a todo first
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        # Try to delete with different user
         wrong_user_id = uuid.uuid4()
         result = await todo_repo.delete_todo_list(created_todo.id, wrong_user_id)
 
         assert result is False
 
-        # Verify it still exists
         existing_todo = await todo_repo.get_todo_list_by_id(created_todo.id, sample_user_id)
         assert existing_todo is not None
 
@@ -284,23 +285,27 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
-        sample_todo_item_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
+        sample_todo_item_data: TodoListItemModel,
     ) -> None:
         """Test successful todo item addition."""
-        # Create a todo first
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        # Add an item
-        item_add = TodoListItemsAddRequest(**sample_todo_item_data)
+        item_add = TodoListItemsAddRequest(
+            title=sample_todo_item_data.title,
+            description=sample_todo_item_data.description,
+        )
         result = await todo_repo.add_todo_list_item(created_todo.id, item_add, sample_user_id)
 
         assert result is not None
         assert isinstance(result, TodoListItemModel)
-        assert result.title == sample_todo_item_data["title"]
-        assert result.description == sample_todo_item_data["description"]
+        assert result.title == sample_todo_item_data.title
+        assert result.description == sample_todo_item_data.description
         assert result.todo_id == created_todo.id
         assert result.completed is False
         assert isinstance(result.id, uuid.UUID)
@@ -310,11 +315,14 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_item_data: dict[str, Any],
+        sample_todo_item_data: TodoListItemModel,
     ) -> None:
         """Test todo item addition when todo doesn't exist."""
         non_existent_todo_id = uuid.uuid4()
-        item_add = TodoListItemsAddRequest(**sample_todo_item_data)
+        item_add = TodoListItemsAddRequest(
+            title=sample_todo_item_data.title,
+            description=sample_todo_item_data.description,
+        )
 
         result = await todo_repo.add_todo_list_item(non_existent_todo_id, item_add, sample_user_id)
 
@@ -325,18 +333,22 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
-        sample_todo_item_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
+        sample_todo_item_data: TodoListItemModel,
     ) -> None:
         """Test todo item addition when user doesn't own the todo."""
-        # Create a todo first
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        # Try to add item with different user
         wrong_user_id = uuid.uuid4()
-        item_add = TodoListItemsAddRequest(**sample_todo_item_data)
+        item_add = TodoListItemsAddRequest(
+            title=sample_todo_item_data.title,
+            description=sample_todo_item_data.description,
+        )
         result = await todo_repo.add_todo_list_item(created_todo.id, item_add, wrong_user_id)
 
         assert result is None
@@ -346,15 +358,16 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test successful retrieval of todo items."""
-        # Create a todo with items
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        # Add items
         items_data = [
             {"title": "Item 1", "description": "Desc 1"},
             {"title": "Item 2", "description": "Desc 2"},
@@ -365,7 +378,6 @@ class TestTodoRepository:
             item_add = TodoListItemsAddRequest(**item_data)
             await todo_repo.add_todo_list_item(created_todo.id, item_add, sample_user_id)
 
-        # Retrieve items
         result = await todo_repo.get_todo_list_items(created_todo.id, sample_user_id)
 
         assert len(result) == len(items_data)
@@ -379,11 +391,13 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test retrieval of todo items when todo has none."""
-        # Create a todo with no items
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
@@ -396,20 +410,24 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
-        sample_todo_item_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
+        sample_todo_item_data: TodoListItemModel,
     ) -> None:
         """Test successful todo item update."""
-        # Create a todo with item
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        item_add = TodoListItemsAddRequest(**sample_todo_item_data)
+        item_add = TodoListItemsAddRequest(
+            title=sample_todo_item_data.title,
+            description=sample_todo_item_data.description,
+        )
         created_item = await todo_repo.add_todo_list_item(created_todo.id, item_add, sample_user_id)
         assert created_item is not None
 
-        # Update the item
         item_update = TodoListItemUpdateRequest(
             title="Updated Title",
             description="Updated Desc",
@@ -429,11 +447,13 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test todo item update when item doesn't exist."""
-        # Create a todo
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
@@ -454,25 +474,28 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
-        sample_todo_item_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
+        sample_todo_item_data: TodoListItemModel,
     ) -> None:
         """Test successful todo item deletion."""
-        # Create a todo with item
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        item_add = TodoListItemsAddRequest(**sample_todo_item_data)
+        item_add = TodoListItemsAddRequest(
+            title=sample_todo_item_data.title,
+            description=sample_todo_item_data.description,
+        )
         created_item = await todo_repo.add_todo_list_item(created_todo.id, item_add, sample_user_id)
         assert created_item is not None
 
-        # Delete the item
         result = await todo_repo.delete_todo_list_item(created_todo.id, created_item.id, sample_user_id)
 
         assert result is True
 
-        # Verify it's gone
         items = await todo_repo.get_todo_list_items(created_todo.id, sample_user_id)
         assert len(items) == 0
 
@@ -481,11 +504,13 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test todo item deletion when item doesn't exist."""
-        # Create a todo
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
@@ -502,21 +527,26 @@ class TestTodoRepository:
         sample_user_id: uuid.UUID,
     ) -> None:
         """Test successful counting of todo lists."""
-        # Initial count should be 0
         initial_count = await todo_repo.count_todo_lists(sample_user_id)
         assert initial_count == 0
 
-        # Create some todos
         todos_data = [
-            {"title": "Todo 1", "description": "Desc 1"},
-            {"title": "Todo 2", "description": "Desc 2"},
+            TodoListModel(
+                id=uuid.uuid4(),
+                title=f"Todo {i + 1}",
+                description=f"Desc {i + 1}",
+                user_id=sample_user_id,
+            )
+            for i in range(5)
         ]
 
         for todo_data in todos_data:
-            todo_create = TodoListCreateRequest(**todo_data)
+            todo_create = TodoListCreateRequest(
+                title=todo_data.title,
+                description=todo_data.description,
+            )
             await todo_repo.create_todo_list(todo_create, sample_user_id)
 
-        # Verify count
         result = await todo_repo.count_todo_lists(sample_user_id)
         assert result == len(todos_data)
 
@@ -525,29 +555,36 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
     ) -> None:
         """Test successful counting of todo items."""
-        # Create a todo
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        # Initial count should be 0
         initial_count = await todo_repo.count_todo_list_items(created_todo.id, sample_user_id)
         assert initial_count == 0
 
-        # Add some items
         items_data = [
-            {"title": "Item 1", "description": "Desc 1"},
-            {"title": "Item 2", "description": "Desc 2"},
+            TodoListItemModel(
+                id=uuid.uuid4(),
+                title=f"Item {i + 1}",
+                description=f"Desc {i + 1}",
+                todo_id=created_todo.id,
+            )
+            for i in range(3)
         ]
 
         for item_data in items_data:
-            item_add = TodoListItemsAddRequest(**item_data)
+            item_add = TodoListItemsAddRequest(
+                title=item_data.title,
+                description=item_data.description,
+            )
             await todo_repo.add_todo_list_item(created_todo.id, item_add, sample_user_id)
 
-        # Verify count
         result = await todo_repo.count_todo_list_items(created_todo.id, sample_user_id)
         assert result == len(items_data)
 
@@ -556,19 +593,23 @@ class TestTodoRepository:
         self,
         todo_repo: TodoPGRepository,
         sample_user_id: uuid.UUID,
-        sample_todo_data: dict[str, Any],
-        sample_todo_item_data: dict[str, Any],
+        sample_todo_data: TodoListModel,
+        sample_todo_item_data: TodoListItemModel,
     ) -> None:
         """Test counting of todo items when user doesn't own the todo."""
-        # Create a todo with items
-        todo_create = TodoListCreateRequest(**sample_todo_data)
+        todo_create = TodoListCreateRequest(
+            title=sample_todo_data.title,
+            description=sample_todo_data.description,
+        )
         created_todo = await todo_repo.create_todo_list(todo_create, sample_user_id)
         assert created_todo is not None
 
-        item_add = TodoListItemsAddRequest(**sample_todo_item_data)
+        item_add = TodoListItemsAddRequest(
+            title=sample_todo_item_data.title,
+            description=sample_todo_item_data.description,
+        )
         await todo_repo.add_todo_list_item(created_todo.id, item_add, sample_user_id)
 
-        # Try to count with different user
         wrong_user_id = uuid.uuid4()
         result = await todo_repo.count_todo_list_items(created_todo.id, wrong_user_id)
 

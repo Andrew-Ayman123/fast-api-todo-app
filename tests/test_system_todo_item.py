@@ -54,11 +54,9 @@ class TestTodoListItemsAPI:
         todo_list_id: UUID,
     ) -> None:
         """Test retrieving todo list items."""
-        # First add an item
         item_payload = TodoListItemsAddRequest(title="Test Item", description="This is a test item")
         await client.post(f"/todos/{todo_list_id}/items", json=item_payload.model_dump(), headers=auth_token_header)
 
-        # Then get items
         response: Response = await client.get(f"/todos/{todo_list_id}/items", headers=auth_token_header)
 
         assert response.status_code == status.HTTP_200_OK
@@ -74,7 +72,6 @@ class TestTodoListItemsAPI:
         todo_list_id: UUID,
     ) -> None:
         """Test updating a todo list item."""
-        # First add an item
         item_payload = TodoListItemsAddRequest(title="Test Item", description="This is a test item")
         add_response = await client.post(
             f"/todos/{todo_list_id}/items",
@@ -83,7 +80,6 @@ class TestTodoListItemsAPI:
         )
         item_id = add_response.json()["id"]
 
-        # Then update the item
         update_payload = TodoListItemUpdateRequest(title="Updated Item", completed=True)
         response: Response = await client.put(
             f"/todos/{todo_list_id}/items/{item_id}",
@@ -104,7 +100,6 @@ class TestTodoListItemsAPI:
         todo_list_id: UUID,
     ) -> None:
         """Test deleting a todo list item."""
-        # First add an item
         item_payload = TodoListItemsAddRequest(title="Test Item", description="This is a test item")
         add_response = await client.post(
             f"/todos/{todo_list_id}/items",
@@ -113,12 +108,10 @@ class TestTodoListItemsAPI:
         )
         item_id = add_response.json()["id"]
 
-        # Then delete the item
         response: Response = await client.delete(f"/todos/{todo_list_id}/items/{item_id}", headers=auth_token_header)
 
         assert response.status_code == status.HTTP_200_OK
 
-        # Verify item is deleted
         get_response = await client.get(f"/todos/{todo_list_id}/items", headers=auth_token_header)
         assert len(get_response.json()["data"]) == 0
 
@@ -145,7 +138,6 @@ class TestTodoListItemsAPI:
 
         assert response.status_code == status.HTTP_200_OK
 
-        # Verify items were created
         get_response = await client.get(f"/todos/{todo_list_id}/items", headers=auth_token_header)
         assert len(get_response.json()["data"]) == len(payload.items)
 
@@ -157,7 +149,6 @@ class TestTodoListItemsAPI:
         todo_list_id: UUID,
     ) -> None:
         """Test updating multiple todo list items at once."""
-        # First create items
         create_payload = TodoListItemCreateManyRequest(
             items=[
                 TodoListItemsAddRequest(title="Item 1", description="First item"),
@@ -171,11 +162,9 @@ class TestTodoListItemsAPI:
         )
         assert create_response.status_code == status.HTTP_200_OK
 
-        # Get the created item IDs
         get_response = await client.get(f"/todos/{todo_list_id}/items", headers=auth_token_header)
         items = get_response.json()["data"]
 
-        # Prepare update payload
         update_payload = TodoListItemUpdateManyRequest(
             updates=[
                 TodoListItemUpdateItem(
@@ -189,7 +178,6 @@ class TestTodoListItemsAPI:
             ],
         )
 
-        # Update items
         response: Response = await client.put(
             f"/todos-batch/{todo_list_id}/items",
             json=update_payload.model_dump(mode="json"),
@@ -199,7 +187,6 @@ class TestTodoListItemsAPI:
         data = response.json()
         assert data["message"] == "Successfully updated 2 todo items"
 
-        # Verify updates
         get_response = await client.get(f"/todos/{todo_list_id}/items", headers=auth_token_header)
         updated_items = get_response.json()["data"]
         assert updated_items[0]["title"] == "Updated Item 1"
@@ -215,7 +202,6 @@ class TestTodoListItemsAPI:
         todo_list_id: UUID,
     ) -> None:
         """Test deleting multiple todo list items at once."""
-        # First create items
         create_payload = TodoListItemCreateManyRequest(
             items=[
                 TodoListItemsAddRequest(title="Item 1", description="First item"),
@@ -228,11 +214,9 @@ class TestTodoListItemsAPI:
             headers=auth_token_header,
         )
 
-        # Get the created item IDs
         get_response = await client.get(f"/todos/{todo_list_id}/items", headers=auth_token_header)
         items = get_response.json()["data"]
 
-        # Delete items
         delete_payload = TodoListItemDeleteManyRequest(item_ids=[item["id"] for item in items])
         response: Response = await client.request(
             "DELETE",
@@ -245,6 +229,5 @@ class TestTodoListItemsAPI:
         data = response.json()
         assert data["message"] == "Successfully deleted 2 todo items"
 
-        # Verify deletion
         get_response = await client.get(f"/todos/{todo_list_id}/items", headers=auth_token_header)
         assert len(get_response.json()["data"]) == 0

@@ -20,6 +20,7 @@ from app.schemas.todo_schema import (
 from app.services.todo_service import TodoService
 from app.utils.logger_util import get_logger
 
+# versioning is handled in the main file
 router = APIRouter(prefix="/todos-batch", tags=["todos-batch"])
 
 

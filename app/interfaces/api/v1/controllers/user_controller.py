@@ -17,6 +17,7 @@ from app.services.jwt_service import JWTService
 from app.services.user_service import UserService
 from app.utils.logger_util import get_logger
 
+# versioning is handled in the main file
 router = APIRouter(prefix="/user", tags=["user"])
 
 

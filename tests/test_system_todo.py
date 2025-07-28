@@ -49,7 +49,6 @@ class TestTodoListAPI:
     @pytest.mark.asyncio
     async def test_get_todo_list_by_id(self, client: AsyncClient, auth_token_header: dict[str, str]) -> None:
         """Test retrieving a specific todo list by ID."""
-        # First create a todo list to get its ID
         create_payload = TodoListCreateRequest(
             title="Todo List for Retrieval",
             description="This todo list will be retrieved by ID",
@@ -68,7 +67,6 @@ class TestTodoListAPI:
     @pytest.mark.asyncio
     async def test_update_todo_list(self, client: AsyncClient, auth_token_header: dict[str, str]) -> None:
         """Test updating a todo list."""
-        # First create a todo list
         create_payload = TodoListCreateRequest(
             title="Todo List to Update",
             description="This todo list will be updated",
@@ -76,7 +74,6 @@ class TestTodoListAPI:
         create_response = await client.post("/todos/", json=create_payload.model_dump(), headers=auth_token_header)
         todo_id = create_response.json()["id"]
 
-        # Update the todo list
         update_payload = TodoListUpdateRequest(
             title="Updated Todo List Title",
         )
@@ -93,7 +90,6 @@ class TestTodoListAPI:
     @pytest.mark.asyncio
     async def test_delete_todo_list(self, client: AsyncClient, auth_token_header: dict[str, str]) -> None:
         """Test deleting a todo list."""
-        # First create a todo list
         create_payload = TodoListCreateRequest(
             title="Todo List to Delete",
             description="This todo list will be deleted",
@@ -101,11 +97,9 @@ class TestTodoListAPI:
         create_response = await client.post("/todos/", json=create_payload.model_dump(), headers=auth_token_header)
         todo_id = create_response.json()["id"]
 
-        # Delete the todo list
         response: Response = await client.delete(f"/todos/{todo_id}", headers=auth_token_header)
         assert response.status_code == status.HTTP_200_OK
 
-        # Verify it's deleted
         verify_response = await client.get(f"/todos/{todo_id}", headers=auth_token_header)
         assert verify_response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -124,12 +118,11 @@ class TestTodoListAPI:
 
         response = await client.get("/todos/", headers=auth_token_header)
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.json()["data"]) >= 2  # Ensure at least 2 items are created
+        assert len(response.json()["data"]) >= 2
 
     @pytest.mark.asyncio
     async def test_update_many_todo_lists(self, client: AsyncClient, auth_token_header: dict[str, str]) -> None:
         """Test batch update of todo lists."""
-        # First create some todo lists
         create_response1 = await client.post(
             "/todos/",
             json=TodoListCreateRequest(title="Update Many 1").model_dump(),
@@ -143,7 +136,6 @@ class TestTodoListAPI:
         id1 = create_response1.json()["id"]
         id2 = create_response2.json()["id"]
 
-        # Update them
         payload = TodoListUpdateManyRequest(
             updates=[
                 TodoListUpdateItem(
@@ -166,8 +158,6 @@ class TestTodoListAPI:
     @pytest.mark.asyncio
     async def test_delete_many_todo_lists(self, client: AsyncClient, auth_token_header: dict[str, str]) -> None:
         """Test batch deletion of todo lists."""
-        # First create some todo lists
-
         create_response1 = await client.post(
             "/todos/",
             json=TodoListCreateRequest(title="Delete Many 1").model_dump(),
@@ -181,7 +171,6 @@ class TestTodoListAPI:
         id1 = create_response1.json()["id"]
         id2 = create_response2.json()["id"]
 
-        # Delete them
         payload = TodoListDeleteManyRequest(
             todo_ids=[
                 id1,
@@ -199,7 +188,6 @@ class TestTodoListAPI:
         data = response.json()
         assert "Successfully deleted 2 todo lists" in data["message"]
 
-        # Verify they're deleted
         verify_response1 = await client.get(f"/todos/{id1}", headers=auth_token_header)
         verify_response2 = await client.get(f"/todos/{id2}", headers=auth_token_header)
         assert verify_response1.status_code == status.HTTP_404_NOT_FOUND

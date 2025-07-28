@@ -36,13 +36,12 @@ class TestUserAPI:
         assert "token" in response.json(), "Token not found in registration response"
         assert response.json()["email"] == sample_user_create_data.email, "Email mismatch in registration response"
 
-        # Attempt to register the same user again
         response = await client.post(
             "/user/register",
             json=sample_user_create_data.model_dump(),
             follow_redirects=False,
         )
-        # Expect conflict status code
+
         assert response.status_code == status.HTTP_409_CONFLICT, (
             "Expected conflict status code for duplicate user registration"
         )

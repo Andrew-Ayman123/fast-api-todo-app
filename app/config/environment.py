@@ -12,7 +12,6 @@ from app.utils.env_util import get_env, get_env_bool, get_env_int
 class Settings(BaseSettings):
     """Application settings: database and API configuration."""
 
-    # Database settings
     database_url: str = get_env("DATABASE_URL")
     database_host: str = get_env("DATABASE_HOST")
     database_port: int = get_env_int("DATABASE_PORT")
@@ -22,7 +21,6 @@ class Settings(BaseSettings):
 
     database_logging: bool = get_env_bool("DATABASE_LOGGING")
 
-    # API settings
     app_name: str = get_env("APP_NAME")
     app_description: str = get_env("APP_DESCRIPTION")
     app_version: str = get_env("APP_VERSION")
@@ -32,10 +30,8 @@ class Settings(BaseSettings):
     server_reload: bool = get_env_bool("SERVER_RELOAD")
     server_log_level: str = get_env("SERVER_LOG_LEVEL")
 
-    # JWT settings
     jwt_secret_key: str = get_env("JWT_SECRET_KEY")
     jwt_algorithm: str = get_env("JWT_ALGORITHM")
     jwt_expiration_minutes: int = get_env_int("JWT_EXPIRATION_MINUTES")
 
-    # Testing
     testing: bool = get_env_bool("TESTING")
