@@ -143,7 +143,7 @@ class TestUserRepository:
                 id=uuid.uuid4(),
                 email=f"user{i}@example.com",
                 username=f"user{i}",
-                password_hash=f"hash{i}",
+                password=f"hash{i}",
             )
             for i in range(5)
         ]

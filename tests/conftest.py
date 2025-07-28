@@ -70,7 +70,7 @@ def sample_todo_data(sample_user_data: UserModel) -> TodoListModel:
     )
 
 @pytest.fixture
-def sample_todo_list_item_data(sample_todo_data: TodoListModel) -> TodoListItemModel:
+def sample_todo_item_data(sample_todo_data: TodoListModel) -> TodoListItemModel:
     """Sample todo list item data for testing."""
     return TodoListItemModel(
         id=uuid.uuid4(),
